@@ -1,0 +1,64 @@
+{
+  "name": "Weather Conditions Scenario",
+  "description": "Heavy rain reduces camera detection probability",
+  "duration": 180,
+  "convoy": {
+    "vehicles": 3,
+    "formation": "staggered",
+    "spacing": 75,
+    "speed": 8.0,
+    "route": {
+      "start": [42.3601, -71.0589],
+      "waypoints": [
+        [42.3606, -71.0584],
+        [42.3616, -71.0584],
+        [42.3626, -71.0584]
+      ],
+      "end": [42.3636, -71.0584]
+    }
+  },
+  "drones": {
+    "count": 3,
+    "altitude": 40,
+    "tether_length": 80,
+    "patrol_pattern": "close_follow",
+    "detection_range": 150
+  },
+  "threats": {
+    "spawn_probability": 0.2,
+    "types": ["person", "vehicle"],
+    "locations": [
+      {
+        "lat": 42.3610,
+        "lon": -71.0580,
+        "type": "person",
+        "probability": 0.4,
+        "description": "Person in rain gear"
+      }
+    ]
+  },
+  "environment": {
+    "weather": "heavy_rain",
+    "visibility": 0.4,
+    "wind_speed": 15.0,
+    "temperature": 10,
+    "precipitation": 25.0
+  },
+  "network": {
+    "packet_loss": 0.1,
+    "latency": 100,
+    "bandwidth": 500
+  },
+  "detection_modifiers": {
+    "confidence_reduction": 0.3,
+    "range_reduction": 0.4,
+    "false_positive_increase": 0.2
+  },
+  "success_criteria": {
+    "min_detections": 1,
+    "max_false_positives": 3,
+    "route_completion": true,
+    "no_collisions": true,
+    "weather_adaptation": true
+  }
+}

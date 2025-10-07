@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: acps-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - acps-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: acps-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - USE_MINIMAL=true
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./models:/app/models
+      - ./sim_configs:/app/sim_configs
+    networks:
+      - acps-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: acps-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - acps-network
+
+  edge-agent-1:
+    build:
+      context: .
+      dockerfile: edge/Dockerfile
+    container_name: acps-edge-1
+    environment:
+      - DRONE_ID=drone-01
+      - VEHICLE_ID=veh-01
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - USE_MINIMAL=true
+      - CAMERA_SOURCE=simulator
+    depends_on:
+      - mosquitto
+      - backend
+    volumes:
+      - ./models:/app/models
+    networks:
+      - acps-network
+
+  edge-agent-2:
+    build:
+      context: .
+      dockerfile: edge/Dockerfile
+    container_name: acps-edge-2
+    environment:
+      - DRONE_ID=drone-02
+      - VEHICLE_ID=veh-02
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - USE_MINIMAL=true
+      - CAMERA_SOURCE=simulator
+    depends_on:
+      - mosquitto
+      - backend
+    volumes:
+      - ./models:/app/models
+    networks:
+      - acps-network
+
+  edge-agent-3:
+    build:
+      context: .
+      dockerfile: edge/Dockerfile
+    container_name: acps-edge-3
+    environment:
+      - DRONE_ID=drone-03
+      - VEHICLE_ID=veh-03
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - USE_MINIMAL=true
+      - CAMERA_SOURCE=simulator
+    depends_on:
+      - mosquitto
+      - backend
+    volumes:
+      - ./models:/app/models
+    networks:
+      - acps-network
+
+networks:
+  acps-network:
+    driver: bridge
+
+volumes:
+  mosquitto-data:
+  mosquitto-logs:

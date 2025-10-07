@@ -1,0 +1,83 @@
+{
+  "name": "Intermittent Connectivity Scenario", 
+  "description": "Simulate packet loss between drone and cloud to test edge autonomy",
+  "duration": 150,
+  "convoy": {
+    "vehicles": 3,
+    "formation": "column",
+    "spacing": 60,
+    "speed": 15.0,
+    "route": {
+      "start": [42.3601, -71.0589],
+      "waypoints": [
+        [42.3611, -71.0579],
+        [42.3621, -71.0579],
+        [42.3631, -71.0579]
+      ],
+      "end": [42.3641, -71.0579]
+    }
+  },
+  "drones": {
+    "count": 3,
+    "altitude": 55,
+    "tether_length": 120,
+    "patrol_pattern": "wide_follow",
+    "detection_range": 250
+  },
+  "threats": {
+    "spawn_probability": 0.25,
+    "types": ["person", "vehicle", "motorcycle"],
+    "locations": [
+      {
+        "lat": 42.3615,
+        "lon": -71.0575,
+        "type": "motorcycle",
+        "probability": 0.7,
+        "description": "Fast moving threat"
+      },
+      {
+        "lat": 42.3625,
+        "lon": -71.0583,
+        "type": "person",
+        "probability": 0.6,
+        "description": "Pedestrian in dead zone"
+      }
+    ]
+  },
+  "environment": {
+    "weather": "clear",
+    "visibility": 1.0,
+    "wind_speed": 8.0,
+    "temperature": 25
+  },
+  "network": {
+    "packet_loss": 0.4,
+    "latency": 200,
+    "bandwidth": 100,
+    "outages": [
+      {
+        "start_time": 30,
+        "duration": 20,
+        "affected_drones": ["drone-02"]
+      },
+      {
+        "start_time": 80,
+        "duration": 15,
+        "affected_drones": ["drone-01", "drone-03"]
+      }
+    ]
+  },
+  "edge_autonomy": {
+    "local_decision_threshold": 0.8,
+    "buffer_capacity": 100,
+    "offline_mode_duration": 30
+  },
+  "success_criteria": {
+    "min_detections": 2,
+    "max_false_positives": 2,
+    "route_completion": true,
+    "no_collisions": true,
+    "edge_decisions_made": 1,
+    "data_recovery_rate": 0.9
+  }
+}
