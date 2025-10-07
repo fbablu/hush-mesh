@@ -1,0 +1,64 @@
+{
+  "name": "Ambush Test Scenario",
+  "description": "Convoy encounters potential ambush with person detection",
+  "duration": 120,
+  "convoy": {
+    "vehicles": 3,
+    "formation": "column",
+    "spacing": 50,
+    "speed": 12.0,
+    "route": {
+      "start": [42.3601, -71.0589],
+      "waypoints": [
+        [42.3611, -71.0589],
+        [42.3621, -71.0589],
+        [42.3631, -71.0589]
+      ],
+      "end": [42.3641, -71.0589]
+    }
+  },
+  "drones": {
+    "count": 3,
+    "altitude": 50,
+    "tether_length": 100,
+    "patrol_pattern": "follow",
+    "detection_range": 200
+  },
+  "threats": {
+    "spawn_probability": 0.3,
+    "types": ["person", "vehicle", "weapon"],
+    "locations": [
+      {
+        "lat": 42.3615,
+        "lon": -71.0595,
+        "type": "person",
+        "probability": 0.8,
+        "description": "Roadside observer"
+      },
+      {
+        "lat": 42.3625,
+        "lon": -71.0585,
+        "type": "vehicle",
+        "probability": 0.6,
+        "description": "Suspicious parked vehicle"
+      }
+    ]
+  },
+  "environment": {
+    "weather": "clear",
+    "visibility": 1.0,
+    "wind_speed": 5.0,
+    "temperature": 20
+  },
+  "network": {
+    "packet_loss": 0.0,
+    "latency": 50,
+    "bandwidth": 1000
+  },
+  "success_criteria": {
+    "min_detections": 2,
+    "max_false_positives": 1,
+    "route_completion": true,
+    "no_collisions": true
+  }
+}
