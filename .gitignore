@@ -208,7 +208,7 @@ __marimo__/
 
 # Project specific
 backend_venv/
-infrastructure/node_modules/
+infrastructure/node_modules/*
 ml/lambda_package/
 data/
 export/
