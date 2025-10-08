@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class MaritimeThreatModel(nn.Module):
-    def __init__(self, input_size=10, hidden_size=128, num_classes=9, sequence_length=60):
+    def __init__(self, input_size=15, hidden_size=128, num_classes=8, sequence_length=30):
         super().__init__()
         self.hidden_size = hidden_size
         self.sequence_length = sequence_length
@@ -54,7 +54,7 @@ class MaritimeThreatModel(nn.Module):
         return output
 
 class MaritimeDataset(Dataset):
-    def __init__(self, data_dir, sequence_length=60):
+    def __init__(self, data_dir, sequence_length=30):
         self.data_dir = data_dir
         self.sequence_length = sequence_length
         self.samples = self._load_samples()
@@ -66,8 +66,8 @@ class MaritimeDataset(Dataset):
                 with open(os.path.join(self.data_dir, file), 'r') as f:
                     frames = [json.loads(line) for line in f]
                     
-                # Create sequences
-                for i in range(0, len(frames) - self.sequence_length + 1, 10):
+                # Create sequences from enhanced data
+                for i in range(0, len(frames) - self.sequence_length + 1, 5):
                     sequence = frames[i:i + self.sequence_length]
                     samples.append(sequence)
         return samples
@@ -83,29 +83,38 @@ class MaritimeDataset(Dataset):
         labels = []
         
         for frame in sequence:
-            # Simple feature extraction
+            # Enhanced feature extraction from drone sensor data
+            drone_data = frame.get('drone_array', [{}])[0]  # Use first drone
+            sensors = drone_data.get('sensor_suite', {})
+            env_conditions = frame.get('environmental_conditions', {})
+            convoy_data = frame.get('convoy_data', {})
+            
             feature_vector = [
-                len(frame.get('detections', [])),
-                frame.get('weather', {}).get('sea_state', 0),
-                frame.get('weather', {}).get('visibility_km', 10),
-                frame.get('weather', {}).get('wind_speed_knots', 0),
-                frame.get('sensor_data', {}).get('radar_contacts', 0),
-                frame.get('sensor_data', {}).get('acoustic_level_db', 50),
-                frame.get('sensor_data', {}).get('rf_signals', 0),
-                1.0 if frame.get('ground_truth_threat', False) else 0.0,
-                frame.get('convoy_pose', {}).get('speed_knots', 0),
-                frame.get('drone_pose', {}).get('altitude_m', 100) / 100.0
+                len(frame.get('threat_detections', [])),
+                env_conditions.get('sea_state', 2),
+                env_conditions.get('visibility_km', 15) / 25.0,
+                env_conditions.get('wind_speed_knots', 10) / 30.0,
+                sensors.get('radar', {}).get('contacts', 0) / 15.0,
+                sensors.get('acoustic', {}).get('hydrophone_data', {}).get('ambient_noise_db', 95) / 120.0,
+                sensors.get('electronic_warfare', {}).get('rf_spectrum', {}).get('signals_detected', 0) / 20.0,
+                1.0 if frame.get('ground_truth', {}).get('threat_present', False) else 0.0,
+                convoy_data.get('speed_knots', 12) / 25.0,
+                drone_data.get('position', {}).get('altitude_m', 180) / 300.0,
+                sensors.get('electro_optical', {}).get('visible_spectrum', {}).get('objects_detected', 0) / 15.0,
+                sensors.get('electro_optical', {}).get('infrared', {}).get('thermal_signatures', 0) / 10.0,
+                env_conditions.get('wave_height_m', 2) / 6.0,
+                frame.get('data_quality', {}).get('sensor_reliability', 0.9),
+                convoy_data.get('vessel_count', 4) / 10.0
             ]
             features.append(feature_vector)
             
-            # Threat type encoding
+            # Enhanced threat type encoding
             threat_types = [
-                'small_fast_craft', 'suspicious_loitering_vessel', 'unregistered_vessel',
-                'ais_spoofing', 'drone_overwater', 'diver_or_swimmer',
-                'floating_mine_like_object', 'collision_risk', 'acoustic_gunshot'
+                'none', 'small_fast_craft', 'floating_mine_like_object', 'submarine_periscope',
+                'debris_field', 'shallow_water', 'oil_spill', 'fishing_nets'
             ]
             
-            threat_type = frame.get('threat_type')
+            threat_type = frame.get('ground_truth', {}).get('threat_type')
             if threat_type in threat_types:
                 label = threat_types.index(threat_type)
             else:
@@ -128,7 +137,7 @@ def train_model(args):
     
     # Model
     model = MaritimeThreatModel(
-        input_size=10,
+        input_size=15,
         hidden_size=128,
         num_classes=args.num_classes,
         sequence_length=args.sequence_length
@@ -180,7 +189,7 @@ def train_model(args):
     
     # Save TorchScript model for inference
     model.eval()
-    example_input = torch.randn(1, args.sequence_length, 10).to(device)
+    example_input = torch.randn(1, args.sequence_length, 15).to(device)
     traced_model = torch.jit.trace(model, example_input)
     traced_model.save(os.path.join(args.model_dir, 'model.pt'))
 

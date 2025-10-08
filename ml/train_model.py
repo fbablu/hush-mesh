@@ -19,11 +19,11 @@ def create_training_job(data_bucket, model_name, use_spot=True):
     
     # Hyperparameters
     hyperparameters = {
-        'epochs': 50,
-        'batch_size': 32,
+        'epochs': 30,
+        'batch_size': 16,
         'learning_rate': 0.001,
-        'sequence_length': 60,
-        'num_classes': 9  # Number of threat types
+        'sequence_length': 30,
+        'num_classes': 8  # Number of threat types
     }
     
     # Training instance configuration

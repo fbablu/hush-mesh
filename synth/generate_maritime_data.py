@@ -11,8 +11,12 @@ class MaritimeDataGenerator:
         self.threat_types = [
             'small_fast_craft', 'suspicious_loitering_vessel', 'unregistered_vessel',
             'ais_spoofing', 'drone_overwater', 'diver_or_swimmer',
-            'floating_mine_like_object', 'collision_risk', 'acoustic_gunshot'
+            'floating_mine_like_object', 'collision_risk', 'acoustic_gunshot',
+            'submarine_periscope', 'debris_field', 'fishing_nets', 'oil_spill',
+            'weather_front', 'shallow_water', 'restricted_zone'
         ]
+        self.weather_conditions = ['clear', 'overcast', 'rain', 'fog', 'storm']
+        self.sea_states = [1, 2, 3, 4, 5, 6]  # Beaufort scale
         
     def generate_scenario(self, scenario_type, duration_minutes=60):
         """Generate synthetic maritime scenario data"""
