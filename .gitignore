@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Project specific
+backend_venv/
+infrastructure/node_modules/
+ml/lambda_package/
+data/
+export/
+models/*.tar.gz
+models/*.pt
+models/*.pth
