@@ -1,0 +1,34 @@
+{
+  "version": "32.0.0",
+  "files": {
+    "19c6d56a7c2bfe33058f90aa573e00a1561e4500141e1faef4007c9436519ecf": {
+      "source": {
+        "path": "asset.19c6d56a7c2bfe33058f90aa573e00a1561e4500141e1faef4007c9436519ecf",
+        "packaging": "zip"
+      },
+      "destinations": {
+        "334682688228-us-east-1": {
+          "bucketName": "cdk-hnb659fds-assets-334682688228-us-east-1",
+          "objectKey": "19c6d56a7c2bfe33058f90aa573e00a1561e4500141e1faef4007c9436519ecf.zip",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::334682688228:role/cdk-hnb659fds-file-publishing-role-334682688228-us-east-1"
+        }
+      }
+    },
+    "bfccd01c1c7e98c20233fea47180d24a3d2cdc6f61658d6eefde546417fd6913": {
+      "source": {
+        "path": "MaritimeAcpsStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "334682688228-us-east-1": {
+          "bucketName": "cdk-hnb659fds-assets-334682688228-us-east-1",
+          "objectKey": "bfccd01c1c7e98c20233fea47180d24a3d2cdc6f61658d6eefde546417fd6913.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::334682688228:role/cdk-hnb659fds-file-publishing-role-334682688228-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

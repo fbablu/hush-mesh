@@ -1,0 +1,222 @@
+/* Maritime ACPS Dashboard Styles - Black & Yellow Theme */
+
+.App {
+  background-color: #000000;
+  color: #ffff00;
+  min-height: 100vh;
+  font-family: 'Courier New', monospace;
+}
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header {
+  background-color: #1a1a1a;
+  padding: 1rem;
+  border-bottom: 2px solid #ffff00;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  color: #ffff00;
+  font-size: 1.5rem;
+}
+
+.status {
+  display: flex;
+  gap: 2rem;
+}
+
+.status span {
+  background-color: #333;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: 1px solid #ffff00;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+}
+
+.left-panel {
+  width: 250px;
+  background-color: #1a1a1a;
+  border-right: 2px solid #ffff00;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.control-section {
+  margin-bottom: 2rem;
+}
+
+.control-section h3 {
+  color: #ffff00;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ffff00;
+  padding-bottom: 0.5rem;
+}
+
+button {
+  background-color: #333;
+  color: #ffff00;
+  border: 2px solid #ffff00;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  width: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+button:hover {
+  background-color: #ffff00;
+  color: #000;
+}
+
+.replan-btn {
+  background-color: #ff6600;
+  border-color: #ff6600;
+}
+
+.pending-plan {
+  background-color: #2a1a00;
+  border: 2px solid #ff6600;
+  padding: 1rem;
+  margin-top: 1rem;
+  border-radius: 4px;
+}
+
+.pending-plan h4 {
+  color: #ff6600;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.approval-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.approve-btn {
+  background-color: #006600;
+  border-color: #00ff00;
+  color: #00ff00;
+}
+
+.reject-btn {
+  background-color: #660000;
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+.map-container {
+  flex: 1;
+  position: relative;
+}
+
+.right-panel {
+  width: 300px;
+  background-color: #1a1a1a;
+  border-left: 2px solid #ffff00;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.right-panel h3 {
+  color: #ffff00;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ffff00;
+  padding-bottom: 0.5rem;
+}
+
+.threat-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.threat-card {
+  background-color: #2a0000;
+  border: 1px solid #ff6600;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+}
+
+.threat-type {
+  font-weight: bold;
+  color: #ff6600;
+  margin-bottom: 0.25rem;
+}
+
+.threat-confidence {
+  color: #ffff00;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.threat-device {
+  color: #ccc;
+  font-size: 0.9em;
+}
+
+.threat-time {
+  color: #999;
+  font-size: 0.8em;
+  margin-top: 0.25rem;
+}
+
+.safety-notice {
+  background-color: #001a00;
+  border: 2px solid #00ff00;
+  padding: 1rem;
+  margin-top: 2rem;
+  border-radius: 4px;
+}
+
+.safety-notice h4 {
+  color: #00ff00;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.safety-notice p {
+  color: #00ff00;
+  margin: 0.25rem 0;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.signout-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: auto;
+  padding: 0.5rem 1rem;
+  z-index: 1000;
+}
+
+/* Leaflet map styling */
+.leaflet-container {
+  background-color: #001122 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: #1a1a1a !important;
+  color: #ffff00 !important;
+  border: 2px solid #ffff00 !important;
+}
+
+.leaflet-popup-tip {
+  background-color: #1a1a1a !important;
+  border: 2px solid #ffff00 !important;
+}

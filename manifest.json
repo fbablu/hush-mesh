@@ -1,0 +1,23 @@
+{
+  "project": "Maritime Autonomous Convoy Protection System",
+  "version": "1.0.0",
+  "files": {
+    "infrastructure/": "CDK project for AWS resource provisioning",
+    "synth/": "Synthetic maritime data generation",
+    "ml/": "SageMaker training and model optimization",
+    "edge/": "IoT Greengrass components and edge inference",
+    "backend/": "FastAPI mission planner and cloud services",
+    "frontend/": "React dashboard application",
+    "simulator/": "Maritime scenario simulator",
+    "docs/": "Deployment guides and architecture diagrams",
+    "tests/": "Unit and integration tests",
+    "ci/": "GitHub Actions CI/CD workflows"
+  },
+  "aws_services": [
+    "S3", "SageMaker", "IoT Core", "IoT Greengrass", "Kinesis",
+    "Lambda", "DynamoDB", "ECS Fargate", "CloudFront", "Cognito",
+    "Step Functions", "CloudWatch", "KMS", "Location Service"
+  ],
+  "deployment_time": "~45 minutes",
+  "estimated_cost": "$50-200/month (depending on usage)"
+}
