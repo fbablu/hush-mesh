@@ -1,9 +1,16 @@
+#!/usr/bin/env python3
 import json
 import torch
 import torch.nn as nn
 import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import logging
 
+app = Flask(__name__)
+CORS(app)
+
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class MaritimeThreatDetector(nn.Module):
@@ -34,74 +41,20 @@ class MaritimeThreatDetector(nn.Module):
         x = self.classifier(x)
         return self.softmax(x)
 
-def model_fn(model_dir):
-    """Load the PyTorch model from the model_dir"""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# Load model
+model = None
+try:
     model = MaritimeThreatDetector()
-    
-    try:
-        model_path = f"{model_dir}/model.pth"
-        state_dict = torch.load(model_path, map_location=device)
-        model.load_state_dict(state_dict)
-        model.to(device)
-        model.eval()
-        logger.info("Model loaded successfully")
-        return model
-    except Exception as e:
-        logger.error(f"Error loading model: {e}")
-        # Fallback: create a new model if loading fails
-        logger.warning("Creating new model with random weights")
-        model.to(device)
-        model.eval()
-        return model
-
-def input_fn(request_body, request_content_type):
-    """Parse input data for inference"""
-    if request_content_type == 'application/json':
-        input_data = json.loads(request_body)
-        sensor_data = input_data.get('sensor_data', {})
-        
-        # Extract features (same as training)
-        features = extract_features(sensor_data)
-        return torch.FloatTensor(features).unsqueeze(0)
-    else:
-        raise ValueError(f"Unsupported content type: {request_content_type}")
-
-def predict_fn(input_data, model):
-    """Run inference on the input data"""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    input_data = input_data.to(device)
-    
-    with torch.no_grad():
-        outputs = model(input_data)
-        probabilities = outputs.cpu().numpy()[0]
-        
-        # Threat classes
-        threat_classes = [
-            'small_fast_craft', 'floating_mine_like_object', 'submarine_periscope',
-            'debris_field', 'fishing_vessel', 'cargo_ship', 'research_vessel', 'unknown'
-        ]
-        
-        predicted_class_idx = np.argmax(probabilities)
-        predicted_class = threat_classes[predicted_class_idx]
-        confidence = float(probabilities[predicted_class_idx])
-        
-        # Determine if it's a threat (first 4 classes are threats)
-        is_threat = predicted_class_idx < 4
-        
-        return {
-            'threat_detected': bool(is_threat),
-            'threat_type': str(predicted_class),
-            'confidence': float(confidence),
-            'all_probabilities': {cls: float(prob) for cls, prob in zip(threat_classes, probabilities)}
-        }
-
-def output_fn(prediction, content_type):
-    """Format the prediction output"""
-    if content_type == 'application/json':
-        return json.dumps(prediction)
-    else:
-        raise ValueError(f"Unsupported content type: {content_type}")
+    state_dict = torch.load('/workshop/models/model.pth', map_location='cpu')
+    model.load_state_dict(state_dict)
+    model.eval()
+    logger.info("Model loaded successfully")
+except Exception as e:
+    logger.error(f"Error loading model: {e}")
+    # Create model with random weights as fallback
+    model = MaritimeThreatDetector()
+    model.eval()
+    logger.warning("Using model with random weights")
 
 def extract_features(sensor_data):
     """Extract 15 features from sensor data"""
@@ -138,5 +91,56 @@ def extract_features(sensor_data):
         return features
     except Exception as e:
         logger.error(f"Error extracting features: {e}")
-        # Return default features
         return [12.0, 4, 2, 15.0, 10.0, 2.0, 0.9, 180.0, 1, 1, 1, 95.0, 3, 0, 0.0]
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    global model
+    if model is None:
+        return jsonify({'error': 'Model not loaded'}), 500
+    
+    try:
+        data = request.json
+        sensor_data = data.get('sensor_data', {})
+        
+        # Extract features
+        features = extract_features(sensor_data)
+        input_tensor = torch.FloatTensor(features).unsqueeze(0)
+        logger.info(f"Input tensor shape: {input_tensor.shape}")
+        
+        # Run inference
+        with torch.no_grad():
+            outputs = model(input_tensor)
+            probabilities = outputs.cpu().numpy()[0]
+            logger.info(f"Model output shape: {outputs.shape}")
+            
+            # Threat classes
+            threat_classes = [
+                'small_fast_craft', 'floating_mine_like_object', 'submarine_periscope',
+                'debris_field', 'fishing_vessel', 'cargo_ship', 'research_vessel', 'unknown'
+            ]
+            
+            predicted_class_idx = np.argmax(probabilities)
+            predicted_class = threat_classes[predicted_class_idx]
+            confidence = float(probabilities[predicted_class_idx])
+            
+            # Determine if it's a threat (first 4 classes are threats)
+            is_threat = predicted_class_idx < 4
+            
+            return jsonify({
+                'threat_detected': bool(is_threat),
+                'threat_type': str(predicted_class),
+                'confidence': float(confidence),
+                'all_probabilities': {cls: float(prob) for cls, prob in zip(threat_classes, probabilities)}
+            })
+            
+    except Exception as e:
+        logger.error(f"Prediction error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    return jsonify({'status': 'reset'})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
