@@ -26,6 +26,9 @@
         .waypoint { position: absolute; width: 8px; height: 8px; background: #ffaa00; border-radius: 50%;
                    box-shadow: 0 0 10px #ffaa00; z-index: 3; }
         
+        .destination { position: absolute; width: 15px; height: 15px; background: #ff6b6b; border-radius: 50%;
+                      box-shadow: 0 0 15px #ff6b6b; z-index: 8; text-align: center; line-height: 15px; }
+        
         /* Multiple path styles */
         .path-optimal { position: absolute; height: 3px; background: linear-gradient(90deg, #00ff88, #ffaa00);
                        box-shadow: 0 0 8px rgba(0,255,136,0.8); z-index: 4; transform-origin: left center; }
@@ -92,7 +95,7 @@
                     <strong>System: OPERATIONAL</strong>
                 </div>
                 <div class="status-item" id="ml-status">
-                    ML Model: Active (92.86% accuracy)
+                    Multi-Route Planning: Active
                 </div>
                 <div class="status-item" id="drone-status">
                     Drones: 4/4 Online
@@ -195,8 +198,11 @@
     </div>
 
     <script>
+        console.log('Loading Multi-Route Maritime Dashboard');
+        
         class MultiRouteMaritimeDashboard {
             constructor() {
+                console.log('Initializing dashboard...');
                 this.convoy = { x: 100, y: 400, lat: 25.7617, lon: -80.1918 };
                 this.destination = { x: 700, y: 200, lat: 25.8200, lon: -80.1200 };
                 this.running = false;
@@ -219,29 +225,38 @@
                 this.initializeMap();
                 this.drawSyntheticThreats();
                 this.setupRouteSelection();
-                this.calculateMultipleRoutes();
+                setTimeout(() => this.calculateMultipleRoutes(), 500);
             }
             
             initializeMap() {
+                console.log('Initializing map...');
                 const map = document.getElementById('map');
                 
+                // Add convoy ship
                 const convoy = document.createElement('div');
                 convoy.className = 'convoy';
                 convoy.id = 'convoy';
                 convoy.style.left = this.convoy.x + 'px';
                 convoy.style.top = this.convoy.y + 'px';
+                convoy.style.position = 'absolute';
+                convoy.style.zIndex = '10';
                 map.appendChild(convoy);
+                console.log('Convoy added at:', this.convoy.x, this.convoy.y);
                 
+                // Add destination target
                 const dest = document.createElement('div');
-                dest.className = 'waypoint';
+                dest.className = 'destination';
+                dest.id = 'destination';
                 dest.style.left = this.destination.x + 'px';
                 dest.style.top = this.destination.y + 'px';
-                dest.style.background = '#ff6b6b';
-                dest.style.width = '15px';
-                dest.style.height = '15px';
+                dest.style.position = 'absolute';
+                dest.style.zIndex = '8';
                 dest.innerHTML = '🎯';
                 dest.style.fontSize = '12px';
+                dest.style.textAlign = 'center';
+                dest.style.lineHeight = '15px';
                 map.appendChild(dest);
+                console.log('Destination added at:', this.destination.x, this.destination.y);
             }
             
             drawSyntheticThreats() {
@@ -254,6 +269,7 @@
                     threatEl.style.left = threat.x + 'px';
                     threatEl.style.top = threat.y + 'px';
                     threatEl.style.display = 'none';
+                    threatEl.style.position = 'absolute';
                     threatEl.title = threat.name;
                     
                     if (threat.behavior === 'intercept') threatEl.innerHTML = '🚤';
@@ -271,6 +287,7 @@
                     zone.style.width = (threat.radius * 2) + 'px';
                     zone.style.height = (threat.radius * 2) + 'px';
                     zone.style.display = 'none';
+                    zone.style.position = 'absolute';
                     map.appendChild(zone);
                     
                     this.initializeThreatMovement(threat, i);
@@ -301,7 +318,6 @@
                 this.calculationInProgress = true;
                 document.getElementById('calc-status').style.display = 'block';
                 
-                // Simulate route calculation with visual feedback
                 setTimeout(() => {
                     this.routes = {
                         optimal: this.generateRoute('optimal'),
@@ -330,18 +346,13 @@
                     let x = this.convoy.x + (this.destination.x - this.convoy.x) * progress;
                     let y = this.convoy.y + (this.destination.y - this.convoy.y) * progress;
                     
-                    // Apply strategy-specific modifications
                     if (strategy === 'fastest') {
-                        // More direct route, less threat avoidance
-                        const directFactor = 0.8;
-                        x = this.convoy.x + (this.destination.x - this.convoy.x) * progress * directFactor + 
-                            (this.destination.x - this.convoy.x) * (1 - directFactor) * progress;
+                        // Direct route
                     } else if (strategy === 'safest') {
-                        // Wide berth around threats
-                        y -= 60 * Math.sin(progress * Math.PI); // Arc around threats
-                        x += 20 * Math.cos(progress * Math.PI * 2); // Zigzag pattern
+                        y -= 60 * Math.sin(progress * Math.PI);
+                        x += 20 * Math.cos(progress * Math.PI * 2);
                     } else {
-                        // Optimal: balanced approach
+                        // Optimal: avoid threats
                         this.syntheticThreats.forEach(threat => {
                             const distance = Math.sqrt((x - threat.x)**2 + (y - threat.y)**2);
                             if (distance < threat.radius + 30) {
@@ -356,7 +367,6 @@
                     waypoints.push({ x, y });
                 }
                 
-                // Calculate metrics
                 const distance = this.calculateRouteDistance(waypoints);
                 const threatExposure = this.calculateThreatExposure(waypoints);
                 const score = this.calculateRouteScore(distance, threatExposure, strategy);
@@ -378,7 +388,7 @@
                     distance += Math.sqrt((wp.x - prev.x)**2 + (wp.y - prev.y)**2);
                     prev = wp;
                 });
-                return distance * 0.01; // Convert to km
+                return distance * 0.01;
             }
             
             calculateThreatExposure(waypoints) {
@@ -405,7 +415,6 @@
             }
             
             drawAllRoutes() {
-                // Clear existing paths
                 document.querySelectorAll('.path-optimal, .path-fastest, .path-safest').forEach(el => el.remove());
                 
                 Object.keys(this.routes).forEach(strategy => {
@@ -420,6 +429,7 @@
                 waypoints.forEach(wp => {
                     const line = document.createElement('div');
                     line.className = `path-${strategy}`;
+                    line.style.position = 'absolute';
                     
                     const dx = wp.x - prevPoint.x;
                     const dy = wp.y - prevPoint.y;
@@ -446,7 +456,6 @@
             }
             
             updateActiveRoute() {
-                // Highlight selected route
                 document.querySelectorAll('.path-optimal, .path-fastest, .path-safest').forEach(el => {
                     el.style.opacity = '0.3';
                 });
@@ -459,10 +468,6 @@
             
             analyzeRoutes() {
                 const routes = this.routes;
-                let analysis = '';
-                let recommendation = '';
-                
-                // Find best route by category
                 const fastest = Object.keys(routes).reduce((a, b) => 
                     parseFloat(routes[a].metrics.distance) < parseFloat(routes[b].metrics.distance) ? a : b);
                 const safest = Object.keys(routes).reduce((a, b) => 
@@ -470,4 +475,185 @@
                 const highest_score = Object.keys(routes).reduce((a, b) => 
                     parseFloat(routes[a].metrics.score) > parseFloat(routes[b].metrics.score) ? a : b);
                 
-                analysis = `Fastest: ${fastest} | Safest: ${safest} | Best Score: ${highest_score}`;               // Generate recommendation\n                const threatCount = this.detectedThreats.size;\n                if (threatCount === 0) {\n                    recommendation = 'Low threat environment - Fastest route recommended';\n                } else if (threatCount >= 3) {\n                    recommendation = 'High threat environment - Safest route recommended';\n                } else {\n                    recommendation = 'Moderate threats - Optimal route recommended';\n                }\n                \n                document.getElementById('path-analysis').textContent = analysis;\n                document.getElementById('route-recommendation').textContent = recommendation;\n            }\n            \n            updateThreatMovement() {\n                this.syntheticThreats.forEach((threat, i) => {\n                    const pattern = this.threatMovementPatterns.get(i);\n                    \n                    switch (threat.behavior) {\n                        case 'intercept':\n                            const convoyFutureX = this.convoy.x + 50;\n                            const convoyFutureY = this.convoy.y - 25;\n                            const dx = convoyFutureX - threat.x;\n                            const dy = convoyFutureY - threat.y;\n                            const distance = Math.sqrt(dx*dx + dy*dy);\n                            \n                            if (distance > 30) {\n                                threat.vx = (dx / distance) * threat.speed;\n                                threat.vy = (dy / distance) * threat.speed;\n                            }\n                            threat.x += threat.vx;\n                            threat.y += threat.vy;\n                            break;\n                            \n                        case 'drift':\n                            threat.x += threat.vx;\n                            threat.y += threat.vy;\n                            if (threat.x < 50 || threat.x > 750) threat.vx *= -1;\n                            if (threat.y < 50 || threat.y > 450) threat.vy *= -1;\n                            break;\n                            \n                        case 'patrol':\n                            pattern.patrolTime += 0.1;\n                            threat.x = pattern.originalX + Math.sin(pattern.patrolTime) * 60;\n                            threat.y = pattern.originalY + Math.sin(pattern.patrolTime * 2) * 30;\n                            break;\n                            \n                        case 'expand':\n                            threat.radius = Math.min(120, threat.radius + 0.1);\n                            threat.x += threat.vx;\n                            threat.y += threat.vy;\n                            break;\n                    }\n                    \n                    if (this.detectedThreats.has(i)) {\n                        this.updateThreatVisualPosition(threat, i);\n                    }\n                });\n                \n                // Recalculate routes if threats moved significantly\n                if (this.step % 10 === 0 && !this.calculationInProgress) {\n                    this.recalculateRoutes();\n                }\n            }\n            \n            updateThreatVisualPosition(threat, index) {\n                const threatEl = document.getElementById(`synthetic-threat-${index}`);\n                const zoneEl = document.getElementById(`threat-zone-${index}`);\n                \n                if (threatEl && zoneEl) {\n                    threatEl.style.left = threat.x + 'px';\n                    threatEl.style.top = threat.y + 'px';\n                    \n                    zoneEl.style.left = (threat.x - threat.radius) + 'px';\n                    zoneEl.style.top = (threat.y - threat.radius) + 'px';\n                    zoneEl.style.width = (threat.radius * 2) + 'px';\n                    zoneEl.style.height = (threat.radius * 2) + 'px';\n                }\n            }\n            \n            detectNearbyThreats() {\n                let threatsDetected = false;\n                \n                this.syntheticThreats.forEach((threat, i) => {\n                    const distance = Math.sqrt((this.convoy.x - threat.x)**2 + (this.convoy.y - threat.y)**2);\n                    \n                    if (distance < threat.radius * 1.3) {\n                        if (!this.detectedThreats.has(i)) {\n                            this.logMessage(`🚨 Threat detected: ${threat.name}`);\n                            threatsDetected = true;\n                        }\n                        document.getElementById(`synthetic-threat-${i}`).style.display = 'block';\n                        document.getElementById(`threat-zone-${i}`).style.display = 'block';\n                        this.detectedThreats.add(i);\n                        this.updateThreatVisualPosition(threat, i);\n                    } else if (distance > threat.radius * 2) {\n                        document.getElementById(`synthetic-threat-${i}`).style.display = 'none';\n                        document.getElementById(`threat-zone-${i}`).style.display = 'none';\n                        this.detectedThreats.delete(i);\n                    }\n                });\n                \n                if (threatsDetected) {\n                    document.getElementById('threat-consideration').textContent = \n                        `Threat assessment: ${this.detectedThreats.size} active threats`;\n                }\n                \n                this.updateThreatPanel();\n            }\n            \n            updateThreatPanel() {\n                const panel = document.getElementById('threat-panel');\n                panel.innerHTML = '';\n                \n                if (this.detectedThreats.size === 0) {\n                    panel.innerHTML = '<div class=\"status-item safe-status\">No threats in detection range</div>';\n                } else {\n                    this.detectedThreats.forEach(threatIndex => {\n                        const threat = this.syntheticThreats[threatIndex];\n                        const distance = Math.sqrt((this.convoy.x - threat.x)**2 + (this.convoy.y - threat.y)**2);\n                        \n                        const item = document.createElement('div');\n                        item.className = 'status-item threat-alert';\n                        item.innerHTML = `\n                            <strong>${threat.name}</strong><br>\n                            Distance: ${Math.floor(distance * 10)}m | Behavior: ${threat.behavior}\n                        `;\n                        panel.appendChild(item);\n                    });\n                }\n            }\n            \n            moveConvoy() {\n                if (!this.routes[this.selectedRoute]) return;\n                \n                const waypoints = this.routes[this.selectedRoute].waypoints;\n                if (waypoints.length === 0) return;\n                \n                const target = waypoints[0];\n                const dx = target.x - this.convoy.x;\n                const dy = target.y - this.convoy.y;\n                const distance = Math.sqrt(dx*dx + dy*dy);\n                \n                if (distance < 15) {\n                    waypoints.shift();\n                    if (waypoints.length === 0) {\n                        this.logMessage('🏁 Destination reached!');\n                        this.stopDemo();\n                        return;\n                    }\n                } else {\n                    const speed = 3 * this.speed;\n                    this.convoy.x += (dx / distance) * speed;\n                    this.convoy.y += (dy / distance) * speed;\n                }\n                \n                document.getElementById('convoy').style.left = this.convoy.x + 'px';\n                document.getElementById('convoy').style.top = this.convoy.y + 'px';\n                \n                this.updateMetrics();\n            }\n            \n            updateMetrics() {\n                const distToDest = Math.sqrt((this.destination.x - this.convoy.x)**2 + (this.destination.y - this.convoy.y)**2) * 0.01;\n                \n                document.getElementById('position').textContent = \n                    `${(this.convoy.lat + Math.random() * 0.001).toFixed(4)}, ${(this.convoy.lon + Math.random() * 0.001).toFixed(4)}`;\n                document.getElementById('distance').textContent = `${distToDest.toFixed(1)} km`;\n                document.getElementById('eta').textContent = `${Math.floor(distToDest * 2)} min`;\n                \n                document.getElementById('scenario-desc').textContent = \n                    `Following ${this.selectedRoute} route | ${this.detectedThreats.size} threats active`;\n            }\n            \n            logMessage(message) {\n                const log = document.getElementById('mission-log');\n                const time = new Date().toLocaleTimeString().slice(0, 5);\n                const div = document.createElement('div');\n                div.textContent = `[${time}] ${message}`;\n                log.insertBefore(div, log.firstChild);\n                \n                while (log.children.length > 8) {\n                    log.removeChild(log.lastChild);\n                }\n            }\n            \n            start() {\n                if (this.running) return;\n                this.running = true;\n                this.logMessage('🚢 Multi-route demo started');\n                this.animate();\n            }\n            \n            pause() {\n                this.running = false;\n                this.logMessage('⏸️ Demo paused');\n            }\n            \n            stop() {\n                this.running = false;\n                this.logMessage('⏹️ Demo stopped');\n            }\n            \n            reset() {\n                this.running = false;\n                this.step = 0;\n                this.convoy = { x: 100, y: 400, lat: 25.7617, lon: -80.1918 };\n                this.detectedThreats.clear();\n                this.threatMovementPatterns.clear();\n                \n                this.syntheticThreats = [\n                    { x: 300, y: 450, vx: -1, vy: -2, type: 'small_fast_craft', radius: 60, name: 'Pirate Skiff', speed: 2.5, behavior: 'intercept' },\n                    { x: 500, y: 150, vx: 0, vy: 1, type: 'floating_mine_like_object', radius: 40, name: 'Drifting Mine', speed: 0.8, behavior: 'drift' },\n                    { x: 650, y: 350, vx: -1.5, vy: 0.5, type: 'submarine_periscope', radius: 80, name: 'Sub Contact', speed: 1.2, behavior: 'patrol' },\n                    { x: 150, y: 100, vx: 2, vy: 1, type: 'debris_field', radius: 90, name: 'Debris Field', speed: 0.5, behavior: 'expand' }\n                ];\n                \n                document.querySelectorAll('.threat, .threat-zone, .path-optimal, .path-fastest, .path-safest').forEach(el => {\n                    if (!el.innerHTML.includes('🎯')) el.remove();\n                });\n                \n                document.getElementById('convoy').style.left = this.convoy.x + 'px';\n                document.getElementById('convoy').style.top = this.convoy.y + 'px';\n                \n                this.drawSyntheticThreats();\n                this.calculateMultipleRoutes();\n                this.updateThreatPanel();\n                this.logMessage('🔄 Demo reset - Recalculating routes');\n            }\n            \n            recalculateRoutes() {\n                this.logMessage('🧠 Recalculating routes due to threat movement');\n                this.calculateMultipleRoutes();\n            }\n            \n            animate() {\n                if (!this.running) return;\n                \n                this.step++;\n                this.updateThreatMovement();\n                this.detectNearbyThreats();\n                this.moveConvoy();\n                \n                setTimeout(() => this.animate(), 1000 / this.speed);\n            }\n        }\n        \n        let dashboard;\n        \n        function startDemo() { dashboard.start(); }\n        function pauseDemo() { dashboard.pause(); }\n        function stopDemo() { dashboard.stop(); }\n        function resetDemo() { dashboard.reset(); }\n        function recalculateRoutes() { dashboard.recalculateRoutes(); }\n        \n        window.onload = () => {\n            dashboard = new MultiRouteMaritimeDashboard();\n        };\n    </script>\n</body>\n</html>"}, {"oldStr": "                analysis = `Fastest: ${fastest} | Safest: ${safest} | Best Score: ${highest_score}`;", "newStr": "                analysis = `Fastest: ${fastest} | Safest: ${safest} | Best Score: ${highest_score}`;"}, {"oldStr": "                \n                // Generate recommendation\n                const threatCount = this.detectedThreats.size;\n                if (threatCount === 0) {\n                    recommendation = 'Low threat environment - Fastest route recommended';\n                } else if (threatCount >= 3) {\n                    recommendation = 'High threat environment - Safest route recommended';\n                } else {\n                    recommendation = 'Moderate threats - Optimal route recommended';\n                }", "newStr": "                \n                // Generate recommendation\n                const threatCount = this.detectedThreats.size;\n                if (threatCount === 0) {\n                    recommendation = 'Low threat environment - Fastest route recommended';\n                } else if (threatCount >= 3) {\n                    recommendation = 'High threat environment - Safest route recommended';\n                } else {\n                    recommendation = 'Moderate threats - Optimal route recommended';\n                }"}]
+                const analysis = `Fastest: ${fastest} | Safest: ${safest} | Best Score: ${highest_score}`;
+                
+                const threatCount = this.detectedThreats.size;
+                let recommendation;
+                if (threatCount === 0) {
+                    recommendation = 'Low threat environment - Fastest route recommended';
+                } else if (threatCount >= 3) {
+                    recommendation = 'High threat environment - Safest route recommended';
+                } else {
+                    recommendation = 'Moderate threats - Optimal route recommended';
+                }
+                
+                document.getElementById('path-analysis').textContent = analysis;
+                document.getElementById('route-recommendation').textContent = recommendation;
+            }
+            
+            detectNearbyThreats() {
+                this.syntheticThreats.forEach((threat, i) => {
+                    const distance = Math.sqrt((this.convoy.x - threat.x)**2 + (this.convoy.y - threat.y)**2);
+                    
+                    if (distance < threat.radius * 1.3) {
+                        if (!this.detectedThreats.has(i)) {
+                            this.logMessage(`🚨 Threat detected: ${threat.name}`);
+                        }
+                        document.getElementById(`synthetic-threat-${i}`).style.display = 'block';
+                        document.getElementById(`threat-zone-${i}`).style.display = 'block';
+                        this.detectedThreats.add(i);
+                    } else if (distance > threat.radius * 2) {
+                        document.getElementById(`synthetic-threat-${i}`).style.display = 'none';
+                        document.getElementById(`threat-zone-${i}`).style.display = 'none';
+                        this.detectedThreats.delete(i);
+                    }
+                });
+                
+                this.updateThreatPanel();
+            }
+            
+            updateThreatPanel() {
+                const panel = document.getElementById('threat-panel');
+                panel.innerHTML = '';
+                
+                if (this.detectedThreats.size === 0) {
+                    panel.innerHTML = '<div class="status-item safe-status">No threats in detection range</div>';
+                } else {
+                    this.detectedThreats.forEach(threatIndex => {
+                        const threat = this.syntheticThreats[threatIndex];
+                        const distance = Math.sqrt((this.convoy.x - threat.x)**2 + (this.convoy.y - threat.y)**2);
+                        
+                        const item = document.createElement('div');
+                        item.className = 'status-item threat-alert';
+                        item.innerHTML = `
+                            <strong>${threat.name}</strong><br>
+                            Distance: ${Math.floor(distance * 10)}m | Behavior: ${threat.behavior}
+                        `;
+                        panel.appendChild(item);
+                    });
+                }
+            }
+            
+            moveConvoy() {
+                if (!this.routes[this.selectedRoute]) return;
+                
+                const waypoints = this.routes[this.selectedRoute].waypoints;
+                if (waypoints.length === 0) return;
+                
+                const target = waypoints[0];
+                const dx = target.x - this.convoy.x;
+                const dy = target.y - this.convoy.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < 15) {
+                    waypoints.shift();
+                    if (waypoints.length === 0) {
+                        this.logMessage('🏁 Destination reached!');
+                        this.stop();
+                        return;
+                    }
+                } else {
+                    const speed = 3 * this.speed;
+                    this.convoy.x += (dx / distance) * speed;
+                    this.convoy.y += (dy / distance) * speed;
+                }
+                
+                document.getElementById('convoy').style.left = this.convoy.x + 'px';
+                document.getElementById('convoy').style.top = this.convoy.y + 'px';
+                
+                this.updateMetrics();
+            }
+            
+            updateMetrics() {
+                const distToDest = Math.sqrt((this.destination.x - this.convoy.x)**2 + (this.destination.y - this.convoy.y)**2) * 0.01;
+                
+                document.getElementById('position').textContent = 
+                    `${(this.convoy.lat + Math.random() * 0.001).toFixed(4)}, ${(this.convoy.lon + Math.random() * 0.001).toFixed(4)}`;
+                document.getElementById('distance').textContent = `${distToDest.toFixed(1)} km`;
+                document.getElementById('eta').textContent = `${Math.floor(distToDest * 2)} min`;
+                
+                document.getElementById('scenario-desc').textContent = 
+                    `Following ${this.selectedRoute} route | ${this.detectedThreats.size} threats active`;
+            }
+            
+            logMessage(message) {
+                const log = document.getElementById('mission-log');
+                const time = new Date().toLocaleTimeString().slice(0, 5);
+                const div = document.createElement('div');
+                div.textContent = `[${time}] ${message}`;
+                log.insertBefore(div, log.firstChild);
+                
+                while (log.children.length > 8) {
+                    log.removeChild(log.lastChild);
+                }
+            }
+            
+            start() {
+                if (this.running) return;
+                this.running = true;
+                this.logMessage('🚢 Multi-route demo started');
+                this.animate();
+            }
+            
+            pause() {
+                this.running = false;
+                this.logMessage('⏸️ Demo paused');
+            }
+            
+            stop() {
+                this.running = false;
+                this.logMessage('⏹️ Demo stopped');
+            }
+            
+            reset() {
+                this.running = false;
+                this.step = 0;
+                this.convoy = { x: 100, y: 400, lat: 25.7617, lon: -80.1918 };
+                this.detectedThreats.clear();
+                
+                // Clear and reinitialize
+                const map = document.getElementById('map');
+                map.innerHTML = '<div class="grid-overlay"></div>';
+                
+                this.initializeMap();
+                this.drawSyntheticThreats();
+                this.calculateMultipleRoutes();
+                this.updateThreatPanel();
+                this.logMessage('🔄 Demo reset - Recalculating routes');
+            }
+            
+            recalculateRoutes() {
+                this.logMessage('🧠 Recalculating routes due to threat movement');
+                this.calculateMultipleRoutes();
+            }
+            
+            animate() {
+                if (!this.running) return;
+                
+                this.step++;
+                this.detectNearbyThreats();
+                this.moveConvoy();
+                
+                if (this.step % 10 === 0 && !this.calculationInProgress) {
+                    this.recalculateRoutes();
+                }
+                
+                setTimeout(() => this.animate(), 1000 / this.speed);
+            }
+        }
+        
+        let dashboard;
+        
+        function startDemo() { dashboard.start(); }
+        function pauseDemo() { dashboard.pause(); }
+        function stopDemo() { dashboard.stop(); }
+        function resetDemo() { dashboard.reset(); }
+        function recalculateRoutes() { dashboard.recalculateRoutes(); }
+        
+        window.onload = () => {
+            dashboard = new MultiRouteMaritimeDashboard();
+            console.log('Dashboard loaded successfully');
+        };
+    </script>
+</body>
+</html>
