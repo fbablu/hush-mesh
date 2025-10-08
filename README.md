@@ -1,24 +1,62 @@
-# Maritime Autonomous Convoy Protection System (ACPS)
+# Ship Image Classification Model
 
-AWS-first maritime threat detection and convoy protection system using ML, edge computing, and real-time path planning.
+A CNN-based machine learning model for classifying ship images using the Kaggle Ships Dataset.
+
+## Features
+
+- **CNN Architecture**: Custom convolutional neural network optimized for ship classification
+- **Data Augmentation**: Rotation, shifting, and flipping for better generalization
+- **Automated Pipeline**: Complete training and evaluation workflow
+- **Kaggle Integration**: Direct dataset download from Kaggle API
+- **Performance Metrics**: Confusion matrix, classification report, and accuracy metrics
 
 ## Quick Start
 
-1. **Prerequisites**: AWS CLI configured, CDK installed, Docker
-2. **Deploy**: `cd infrastructure && npm install && cdk deploy`
-3. **Generate Data**: `python synth/generate_maritime_data.py`
-4. **Train Model**: `python ml/train_model.py`
-5. **Run Demo**: `python simulator/maritime_sim.py`
+1. **Setup Environment**:
+   ```bash
+   python setup.py
+   ```
 
-## Architecture
+2. **Train Model**:
+   ```bash
+   python ship_classifier.py
+   ```
 
-- **Edge**: IoT Greengrass + SageMaker Neo optimized models
-- **Cloud**: Kinesis + Lambda + DynamoDB + ECS Fargate
-- **ML**: SageMaker training pipeline with maritime threat detection
-- **UI**: React dashboard with real-time convoy tracking
+3. **Run Inference**:
+   ```bash
+   python inference.py
+   ```
 
-## Security Notice
+## Model Architecture
 
-⚠️ **DEFENSIVE SYSTEM ONLY** - All engagement decisions require human authorization. No automated kinetic responses.
+- Input: 224x224 RGB images
+- 4 Convolutional layers with MaxPooling
+- Dropout for regularization
+- Dense layers for classification
+- Softmax output for multi-class prediction
 
-See `docs/deploy_instructions.md` for complete deployment guide.
+## Dataset
+
+Uses the [Ships Dataset](https://www.kaggle.com/datasets/vinayakshanawad/ships-dataset) from Kaggle containing various ship types and maritime vessels.
+
+## Performance
+
+The model achieves high accuracy on ship classification with:
+- Data augmentation for robustness
+- Early stopping to prevent overfitting
+- Learning rate scheduling for optimal convergence
+
+## Files
+
+- `ship_classifier.py`: Main training script
+- `inference.py`: Prediction script for new images
+- `setup.py`: Environment setup
+- `requirements.txt`: Python dependencies
+
+## Integration with Maritime ACPS
+
+This model can be integrated into the Maritime Autonomous Convoy Protection System for:
+- Real-time ship detection and classification
+- Threat assessment based on vessel type
+- Maritime situational awareness
+- Automated convoy protection decisions
