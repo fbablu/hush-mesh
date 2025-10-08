@@ -77,31 +77,54 @@ class PathPlanner:
                     if distance <= radius * 0.5:  # Core threat zone
                         self.threat_grid[x, y] = 1
     
-    def find_optimal_path(self, start_pos: Tuple[float, float], 
-                         end_pos: Tuple[float, float],
-                         convoy_position: Tuple[float, float]) -> List[Tuple[float, float]]:
-        """Find optimal path using A* algorithm avoiding threats"""
+    def find_multiple_paths(self, start_pos: Tuple[float, float], 
+                           end_pos: Tuple[float, float],
+                           convoy_position: Tuple[float, float]) -> Dict:
+        """Find multiple path alternatives with different strategies"""
         
-        # Convert positions to grid coordinates
         start_grid = self._lat_lon_to_grid(start_pos[0], start_pos[1], convoy_position[0], convoy_position[1])
         end_grid = self._lat_lon_to_grid(end_pos[0], end_pos[1], convoy_position[0], convoy_position[1])
         
-        # A* algorithm
-        path_grid = self._astar(start_grid, end_grid)
+        paths = {}
         
-        if not path_grid:
-            return []  # No path found
+        # Strategy 1: Optimal (balanced distance and threat avoidance)
+        paths['optimal'] = self._astar_with_strategy(start_grid, end_grid, 'optimal')
         
-        # Convert back to lat/lon coordinates
-        path_coords = []
-        for grid_x, grid_y in path_grid:
-            lat, lon = self._grid_to_lat_lon(grid_x, grid_y, convoy_position[0], convoy_position[1])
-            path_coords.append((lat, lon))
+        # Strategy 2: Fastest (minimize distance, accept some threat exposure)
+        paths['fastest'] = self._astar_with_strategy(start_grid, end_grid, 'fastest')
         
-        return path_coords
+        # Strategy 3: Safest (maximum threat avoidance, longer distance OK)
+        paths['safest'] = self._astar_with_strategy(start_grid, end_grid, 'safest')
+        
+        # Convert to coordinates and calculate metrics
+        result = {}
+        for strategy, path_grid in paths.items():
+            if path_grid:
+                path_coords = []
+                for grid_x, grid_y in path_grid:
+                    lat, lon = self._grid_to_lat_lon(grid_x, grid_y, convoy_position[0], convoy_position[1])
+                    path_coords.append((lat, lon))
+                
+                metrics = self.calculate_path_metrics(path_coords)
+                result[strategy] = {
+                    'path': path_coords,
+                    'metrics': metrics,
+                    'score': self._calculate_path_score(metrics, strategy)
+                }
+        
+        return result
     
-    def _astar(self, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
-        """A* pathfinding algorithm"""
+    def find_optimal_path(self, start_pos: Tuple[float, float], 
+                         end_pos: Tuple[float, float],
+                         convoy_position: Tuple[float, float]) -> List[Tuple[float, float]]:
+        """Find single optimal path (backward compatibility)"""
+        paths = self.find_multiple_paths(start_pos, end_pos, convoy_position)
+        if 'optimal' in paths:
+            return paths['optimal']['path']
+        return []
+    
+    def _astar_with_strategy(self, start: Tuple[int, int], goal: Tuple[int, int], strategy: str) -> List[Tuple[int, int]]:
+        """A* pathfinding with different strategies"""
         def heuristic(a: Tuple[int, int], b: Tuple[int, int]) -> float:
             return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
         
@@ -117,6 +140,17 @@ class PathPlanner:
                         neighbors.append((nx, ny))
             return neighbors
         
+        # Strategy-specific cost weights
+        if strategy == 'fastest':
+            threat_weight = 0.3  # Low threat avoidance
+            distance_weight = 1.0
+        elif strategy == 'safest':
+            threat_weight = 3.0  # High threat avoidance
+            distance_weight = 0.5
+        else:  # optimal
+            threat_weight = 1.0  # Balanced
+            distance_weight = 1.0
+        
         open_set = [(0, start)]
         came_from = {}
         g_score = {start: 0}
@@ -126,7 +160,6 @@ class PathPlanner:
             current = heapq.heappop(open_set)[1]
             
             if current == goal:
-                # Reconstruct path
                 path = []
                 while current in came_from:
                     path.append(current)
@@ -135,21 +168,32 @@ class PathPlanner:
                 return path[::-1]
             
             for neighbor in get_neighbors(current):
-                # Calculate movement cost including threat avoidance
-                base_cost = 1.0
-                if abs(neighbor[0] - current[0]) + abs(neighbor[1] - current[1]) == 2:
-                    base_cost = 1.414  # Diagonal movement
-                
+                base_cost = 1.414 if abs(neighbor[0] - current[0]) + abs(neighbor[1] - current[1]) == 2 else 1.0
                 threat_cost = self.cost_grid[neighbor[0], neighbor[1]]
-                tentative_g_score = g_score[current] + (base_cost * threat_cost)
+                
+                # Apply strategy weights
+                total_cost = (base_cost * distance_weight) + ((threat_cost - 1.0) * threat_weight)
+                tentative_g_score = g_score[current] + total_cost
                 
                 if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
                     came_from[neighbor] = current
                     g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                    f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal) * distance_weight
                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
         
-        return []  # No path found
+        return []
+    
+    def _calculate_path_score(self, metrics: Dict, strategy: str) -> float:
+        """Calculate overall path score based on strategy"""
+        distance = metrics['total_distance_km']
+        threat_exposure = metrics['threat_exposure']
+        
+        if strategy == 'fastest':
+            return 100 - distance * 2 - threat_exposure * 0.5
+        elif strategy == 'safest':
+            return 100 - threat_exposure * 5 - distance * 0.5
+        else:  # optimal
+            return 100 - distance * 1.5 - threat_exposure * 2
     
     def _lat_lon_to_grid(self, lat: float, lon: float, 
                         center_lat: float, center_lon: float) -> Tuple[int, int]:
