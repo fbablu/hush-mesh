@@ -215,3 +215,4 @@ export/
 models/*.tar.gz
 models/*.pt
 models/*.pth
+frontend/node_modules/
