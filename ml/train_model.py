@@ -9,8 +9,10 @@ from sagemaker.tuner import HyperparameterTuner, IntegerParameter, ContinuousPar
 def create_training_job(data_bucket, model_name, use_spot=True):
     """Create SageMaker training job for maritime threat detection"""
     
+    import os
     session = sagemaker.Session()
-    role = sagemaker.get_execution_role()
+    role = os.environ['SAGEMAKER_ROLE_ARN']
+    print(f"Using SageMaker role: {role}")
     
     # Training script location
     source_dir = 'training_code'
@@ -25,7 +27,7 @@ def create_training_job(data_bucket, model_name, use_spot=True):
     }
     
     # Training instance configuration
-    instance_type = 'ml.g4dn.xlarge' if not use_spot else 'ml.g4dn.xlarge'
+    instance_type = 'ml.m5.large'
     
     estimator = PyTorch(
         entry_point='train.py',

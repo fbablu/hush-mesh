@@ -12,7 +12,6 @@
       }
      ]
     },
-    "BucketName": "maritime-acps-data-334682688228",
     "LifecycleConfiguration": {
      "Rules": [
       {
@@ -37,7 +36,6 @@
   "FrontendBucketEFE2E19C": {
    "Type": "AWS::S3::Bucket",
    "Properties": {
-    "BucketName": "maritime-acps-frontend-334682688228",
     "WebsiteConfiguration": {
      "IndexDocument": "index.html"
     }
@@ -46,43 +44,6 @@
    "DeletionPolicy": "Retain",
    "Metadata": {
     "aws:cdk:path": "MaritimeAcpsStack/FrontendBucket/Resource"
-   }
-  },
-  "FrontendBucketPolicy1DFF75D9": {
-   "Type": "AWS::S3::BucketPolicy",
-   "Properties": {
-    "Bucket": {
-     "Ref": "FrontendBucketEFE2E19C"
-    },
-    "PolicyDocument": {
-     "Statement": [
-      {
-       "Action": "s3:GetObject",
-       "Effect": "Allow",
-       "Principal": {
-        "AWS": "*"
-       },
-       "Resource": {
-        "Fn::Join": [
-         "",
-         [
-          {
-           "Fn::GetAtt": [
-            "FrontendBucketEFE2E19C",
-            "Arn"
-           ]
-          },
-          "/*"
-         ]
-        ]
-       }
-      }
-     ],
-     "Version": "2012-10-17"
-    }
-   },
-   "Metadata": {
-    "aws:cdk:path": "MaritimeAcpsStack/FrontendBucket/Policy/Resource"
    }
   },
   "EventsTableD24865E5": {
@@ -108,8 +69,7 @@
       "AttributeType": "N"
      }
     ],
-    "BillingMode": "PAY_PER_REQUEST",
-    "TableName": "maritime-events"
+    "BillingMode": "PAY_PER_REQUEST"
    },
    "UpdateReplacePolicy": "Retain",
    "DeletionPolicy": "Retain",
@@ -120,7 +80,6 @@
   "TelemetryStream9D62E5EC": {
    "Type": "AWS::Kinesis::Stream",
    "Properties": {
-    "Name": "maritime-telemetry",
     "RetentionPeriodHours": 24,
     "ShardCount": 2,
     "StreamEncryption": {
@@ -828,7 +787,6 @@
     "UsernameAttributes": [
      "email"
     ],
-    "UserPoolName": "maritime-operators",
     "VerificationMessageTemplate": {
      "DefaultEmailOption": "CONFIRM_WITH_CODE",
      "EmailMessage": "The verification code to your new account is {####}",
@@ -1016,7 +974,7 @@
   "CDKMetadata": {
    "Type": "AWS::CDK::Metadata",
    "Properties": {
-    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12Sy1LDMAxFv4W9a6Bd0C20lGEDmfJaMoqjFjWJzfgB08n435HjpOmw0tH1tXKjZC6XN/LqAn7dTFX1rKFSdi8eVC1Y+uzcQnZ3QdXoxWqnB8qlMA2p4yQPfW7uwGEU1VFDayoe+Qplg8nbQxQ1aXTk0rMsQptOMkVBxktuh3ENtGUFstsErTwZnZwjsxda2W1NHt3XKVWmKNziE5xD7+RtKgLVXHbv3yp53ouVKELJxpdQ6vySE21N8HhKnvVJ42lGEYyh+oME949FKk/gH8DjLxxFYemHcRr8qD1a5tGQkwzdref1f7WofeSsvKJVExz7k2vEDdg9pByuXuOONI0p/itGe+BV20mLQpk9o5Hdm0NbGNOkiyceYdUQRzg/ygrfb0yodpZHp2zMm8QfWK7JeUtlGMOc9zGKLToTrOqXxMGqHLH/KPzH7Unv08lz8N8hr3/wR6FNhfLgLn+ul3J+JZcXB0c0s0F7alFuc/0DqE5Nj8oCAAA="
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12STU/DMAyGfwv3LIxxYNdtMMQFqgHjiNzUK6ZtgvKxaary33GadUOc/Nh+bb1xO5PzOzm9goObqKqZtFTK/tWDagSXPnt3K/tlUA16sdrpE+WwBIdRVEcNnal46g3KFpNqgCga0ujIpXUWoUudTFGQ8ZLTwrSkjqKFrqxA9uuglSejk3Jk1kIn+43Jq4d4GjsviMLdfoJz6J1cpCBQzWS//VFJsy1WogglC19DqfM7LrQxwePZea5farzNKILR1NBI8PBUpPAM/hE8HuAoCkt7xsviJ+3RMo+C7OSULTxf+KtD7SN75ROt2uBYn1QjrsHWkHy45h53pGl08b9itAc+tb3UolCmZjSyf3doC2PaNHjmEVYtsYW/rVzh+daEamd5dfLGvE78geU9OW+pDKOZv3mMYoPOBKuGI7GxKlscPgr/VDXpOnVegv8J+fwnfRTaVCi/3fX+Zi5nUzm/+nZEExu0pw7lJsdfnKkQxq0CAAA="
    },
    "Metadata": {
     "aws:cdk:path": "MaritimeAcpsStack/CDKMetadata/Default"

@@ -27,7 +27,6 @@
                         }
                       ]
                     },
-                    "bucketName": "maritime-acps-data-334682688228",
                     "lifecycleConfiguration": {
                       "rules": [
                         {
@@ -65,7 +64,6 @@
                 "attributes": {
                   "aws:cdk:cloudformation:type": "AWS::S3::Bucket",
                   "aws:cdk:cloudformation:props": {
-                    "bucketName": "maritime-acps-frontend-334682688228",
                     "websiteConfiguration": {
                       "indexDocument": "index.html"
                     }
@@ -73,58 +71,6 @@
                 },
                 "constructInfo": {
                   "fqn": "aws-cdk-lib.aws_s3.CfnBucket",
-                  "version": "2.87.0"
-                }
-              },
-              "Policy": {
-                "id": "Policy",
-                "path": "MaritimeAcpsStack/FrontendBucket/Policy",
-                "children": {
-                  "Resource": {
-                    "id": "Resource",
-                    "path": "MaritimeAcpsStack/FrontendBucket/Policy/Resource",
-                    "attributes": {
-                      "aws:cdk:cloudformation:type": "AWS::S3::BucketPolicy",
-                      "aws:cdk:cloudformation:props": {
-                        "bucket": {
-                          "Ref": "FrontendBucketEFE2E19C"
-                        },
-                        "policyDocument": {
-                          "Statement": [
-                            {
-                              "Action": "s3:GetObject",
-                              "Effect": "Allow",
-                              "Principal": {
-                                "AWS": "*"
-                              },
-                              "Resource": {
-                                "Fn::Join": [
-                                  "",
-                                  [
-                                    {
-                                      "Fn::GetAtt": [
-                                        "FrontendBucketEFE2E19C",
-                                        "Arn"
-                                      ]
-                                    },
-                                    "/*"
-                                  ]
-                                ]
-                              }
-                            }
-                          ],
-                          "Version": "2012-10-17"
-                        }
-                      }
-                    },
-                    "constructInfo": {
-                      "fqn": "aws-cdk-lib.aws_s3.CfnBucketPolicy",
-                      "version": "2.87.0"
-                    }
-                  }
-                },
-                "constructInfo": {
-                  "fqn": "aws-cdk-lib.aws_s3.BucketPolicy",
                   "version": "2.87.0"
                 }
               }
@@ -164,8 +110,7 @@
                         "attributeType": "N"
                       }
                     ],
-                    "billingMode": "PAY_PER_REQUEST",
-                    "tableName": "maritime-events"
+                    "billingMode": "PAY_PER_REQUEST"
                   }
                 },
                 "constructInfo": {
@@ -197,7 +142,6 @@
                 "attributes": {
                   "aws:cdk:cloudformation:type": "AWS::Kinesis::Stream",
                   "aws:cdk:cloudformation:props": {
-                    "name": "maritime-telemetry",
                     "retentionPeriodHours": 24,
                     "shardCount": 2,
                     "streamEncryption": {
@@ -1250,7 +1194,6 @@
                     "usernameAttributes": [
                       "email"
                     ],
-                    "userPoolName": "maritime-operators",
                     "verificationMessageTemplate": {
                       "defaultEmailOption": "CONFIRM_WITH_CODE",
                       "emailMessage": "The verification code to your new account is {####}",

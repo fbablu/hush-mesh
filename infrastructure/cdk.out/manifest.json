@@ -17,7 +17,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::334682688228:role/cdk-hnb659fds-deploy-role-334682688228-us-east-1",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::334682688228:role/cdk-hnb659fds-cfn-exec-role-334682688228-us-east-1",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-334682688228-us-east-1/bfccd01c1c7e98c20233fea47180d24a3d2cdc6f61658d6eefde546417fd6913.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-334682688228-us-east-1/65c034da6cb050efd6bf4f93f7596a36f49c27b0c7924bb83a1f83ae5bd24f51.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -43,20 +43,6 @@
           {
             "type": "aws:cdk:logicalId",
             "data": "FrontendBucketEFE2E19C"
-          }
-        ],
-        "/MaritimeAcpsStack/FrontendBucket/Policy/Resource": [
-          {
-            "type": "aws:cdk:logicalId",
-            "data": "FrontendBucketPolicy1DFF75D9"
-          }
-        ],
-        "/MaritimeAcpsStack/EventsTable": [
-          {
-            "type": "aws:cdk:hasPhysicalName",
-            "data": {
-              "Ref": "EventsTableD24865E5"
-            }
           }
         ],
         "/MaritimeAcpsStack/EventsTable/Resource": [
