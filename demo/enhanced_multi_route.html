@@ -92,11 +92,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         
-        const EnhancedMultiRoute = () => {
-            const [convoy, setConvoy] = useState({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 });
+        const EnhancedMultiRoute = ({ running, setRunning, speed, convoy, setConvoy }) => {
             const [destination] = useState({ x: 700, y: 200, lat: 25.8200, lon: -80.1200 });
-            const [running, setRunning] = useState(false);
-            const [speed, setSpeed] = useState(1);
             const [selectedRoute, setSelectedRoute] = useState('optimal');
             const [routes, setRoutes] = useState({});
             const [detectedObjects, setDetectedObjects] = useState(new Set());
@@ -294,30 +291,40 @@
             ]);
         };
         
-        const Controls = () => {
-            return React.createElement('div', { className: 'controls' }, [
-                React.createElement('button', { 
-                    key: 'start', 
-                    className: 'btn success', 
-                    onClick: () => setRunning(true) 
-                }, '▶️ Start Demo'),
-                React.createElement('button', { 
-                    key: 'pause', 
-                    className: 'btn', 
-                    onClick: () => setRunning(false) 
-                }, '⏸️ Pause'),
-                React.createElement('button', { 
-                    key: 'stop', 
-                    className: 'btn danger', 
-                    onClick: () => { setRunning(false); setConvoy({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 }); } 
-                }, '⏹️ Stop')
-            ]);
-        };
-        
         const App = () => {
+            const [running, setRunning] = useState(false);
+            const [speed, setSpeed] = useState(1);
+            const [convoy, setConvoy] = useState({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 });
+            
             return React.createElement('div', null, [
-                React.createElement(EnhancedMultiRoute, { key: 'dashboard' }),
-                React.createElement(Controls, { key: 'controls' })
+                React.createElement(EnhancedMultiRoute, { 
+                    key: 'dashboard',
+                    running,
+                    setRunning,
+                    speed,
+                    convoy,
+                    setConvoy
+                }),
+                React.createElement('div', { key: 'controls', className: 'controls' }, [
+                    React.createElement('button', { 
+                        key: 'start', 
+                        className: 'btn success', 
+                        onClick: () => setRunning(true) 
+                    }, '▶️ Start Demo'),
+                    React.createElement('button', { 
+                        key: 'pause', 
+                        className: 'btn', 
+                        onClick: () => setRunning(false) 
+                    }, '⏸️ Pause'),
+                    React.createElement('button', { 
+                        key: 'stop', 
+                        className: 'btn danger', 
+                        onClick: () => { 
+                            setRunning(false); 
+                            setConvoy({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 }); 
+                        } 
+                    }, '⏹️ Stop')
+                ])
             ]);
         };
         
