@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ML Server Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #0a0e1a; color: #fff; }
+        .result { background: #1a1a2e; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { background: #2a5298; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1e3c72; }
+        .success { border-left: 4px solid #00ff88; }
+        .error { border-left: 4px solid #ff4444; }
+    </style>
+</head>
+<body>
+    <h1>🧠 ML Server Connection Test</h1>
+    
+    <button onclick="testHealth()">Test Health</button>
+    <button onclick="testPrediction()">Test Prediction</button>
+    <button onclick="testThreatObject()">Test Threat Object</button>
+    <button onclick="testBenignObject()">Test Benign Object</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function addResult(title, content, isSuccess = true) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = `<h3>${title}</h3><pre>${JSON.stringify(content, null, 2)}</pre>`;
+            results.appendChild(div);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:9000/health');
+                const data = await response.json();
+                addResult('Health Check', data, response.ok);
+            } catch (error) {
+                addResult('Health Check Error', error.message, false);
+            }
+        }
+
+        async function testPrediction() {
+            const testData = {
+                convoy_data: { speed_knots: 12, vessel_count: 4 },
+                environmental_conditions: { sea_state: 2, visibility_km: 15, wind_speed_knots: 10, wave_height_m: 2 },
+                data_quality: { sensor_reliability: 0.9 },
+                drone_array: [{
+                    sensor_suite: {
+                        electro_optical: { visible_spectrum: { objects_detected: 1 }, infrared: { thermal_signatures: 1 } },
+                        radar: { contacts: 1 },
+                        acoustic: { hydrophone_data: { ambient_noise_db: 95 } },
+                        electronic_warfare: { rf_spectrum: { signals_detected: 3 } }
+                    },
+                    position: { altitude_m: 180 }
+                }],
+                threat_detections: [],
+                ground_truth: { threat_present: false, threat_type: 'fishing_vessel' }
+            };
+
+            try {
+                const response = await fetch('http://localhost:9000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sensor_data: testData })
+                });
+                const data = await response.json();
+                addResult('Basic Prediction Test', data, response.ok);
+            } catch (error) {
+                addResult('Prediction Test Error', error.message, false);
+            }
+        }
+
+        async function testThreatObject() {
+            const threatData = {
+                convoy_data: { speed_knots: 12, vessel_count: 4 },
+                environmental_conditions: { sea_state: 3, visibility_km: 8, wind_speed_knots: 15, wave_height_m: 3 },
+                data_quality: { sensor_reliability: 0.85 },
+                drone_array: [{
+                    sensor_suite: {
+                        electro_optical: { visible_spectrum: { objects_detected: 3 }, infrared: { thermal_signatures: 2 } },
+                        radar: { contacts: 3 },
+                        acoustic: { hydrophone_data: { ambient_noise_db: 105 } },
+                        electronic_warfare: { rf_spectrum: { signals_detected: 8 } }
+                    },
+                    position: { altitude_m: 180 }
+                }],
+                threat_detections: [{ detection_id: 'threat_test_001' }],
+                ground_truth: { threat_present: true, threat_type: 'small_fast_craft' }
+            };
+
+            try {
+                const response = await fetch('http://localhost:9000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sensor_data: threatData })
+                });
+                const data = await response.json();
+                addResult('Threat Object Test (should detect threat)', data, response.ok);
+            } catch (error) {
+                addResult('Threat Test Error', error.message, false);
+            }
+        }
+
+        async function testBenignObject() {
+            const benignData = {
+                convoy_data: { speed_knots: 12, vessel_count: 4 },
+                environmental_conditions: { sea_state: 1, visibility_km: 20, wind_speed_knots: 5, wave_height_m: 1 },
+                data_quality: { sensor_reliability: 0.95 },
+                drone_array: [{
+                    sensor_suite: {
+                        electro_optical: { visible_spectrum: { objects_detected: 1 }, infrared: { thermal_signatures: 1 } },
+                        radar: { contacts: 1 },
+                        acoustic: { hydrophone_data: { ambient_noise_db: 90 } },
+                        electronic_warfare: { rf_spectrum: { signals_detected: 2 } }
+                    },
+                    position: { altitude_m: 180 }
+                }],
+                threat_detections: [],
+                ground_truth: { threat_present: false, threat_type: 'cargo_ship' }
+            };
+
+            try {
+                const response = await fetch('http://localhost:9000/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sensor_data: benignData })
+                });
+                const data = await response.json();
+                addResult('Benign Object Test (should be safe)', data, response.ok);
+            } catch (error) {
+                addResult('Benign Test Error', error.message, false);
+            }
+        }
+
+        // Auto-run health check on load
+        window.addEventListener('load', testHealth);
+    </script>
+</body>
+</html>

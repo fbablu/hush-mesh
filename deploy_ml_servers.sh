@@ -1,3 +1,25 @@
+#!/bin/bash
+# Deploy ML and Proxy Servers Script
+
+echo "🚀 Deploying ML and Proxy Servers..."
+echo "======================================"
+
+# Kill existing servers
+echo "⏹️  Stopping existing servers..."
+pkill -f ml_api_server.py
+pkill -f proxy_server.py
+sleep 2
+
+# Backup old files
+echo "💾 Backing up old files..."
+cd /workshop/hush-mesh/ml
+if [ -f ml_api_server.py ]; then
+    cp ml_api_server.py ml_api_server.py.backup.$(date +%Y%m%d_%H%M%S)
+fi
+
+# Deploy new ML server
+echo "📦 Deploying new ML server..."
+cat > /workshop/hush-mesh/ml/ml_api_server.py << 'MLEOF'
 #!/usr/bin/env python3
 # Fixed version with proper class inheritance
 import json
@@ -219,3 +241,119 @@ def reset():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=9000, debug=False)
+MLEOF
+
+# Deploy proxy server
+echo "📦 Deploying proxy server..."
+cat > /workshop/hush-mesh/proxy_server.py << 'PROXYEOF'
+#!/usr/bin/env python3
+from flask import Flask, send_from_directory, request, jsonify
+from flask_cors import CORS
+import requests
+import logging
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+ML_SERVER_URL = "http://localhost:9000"
+
+@app.route('/')
+def index():
+    return """
+    <html>
+    <head><title>ACPS Maritime Demos</title></head>
+    <body style="font-family: Arial; padding: 20px;">
+        <h1>🚢 ACPS Maritime Threat Detection Demos</h1>
+        <ul>
+            <li><a href="/enhanced_multi_route.html">Enhanced Multi-Route Planning Demo</a></li>
+            <li><a href="/test_ml.html">ML Model Test Page</a></li>
+            <li><a href="/ml_monitor.html">ML Model Real-Time Monitor</a></li>
+        </ul>
+    </body>
+    </html>
+    """
+
+@app.route('/<path:filename>')
+def serve_file(filename):
+    try:
+        demo_dir = os.path.join(os.path.dirname(__file__), 'demo')
+        if os.path.exists(os.path.join(demo_dir, filename)):
+            return send_from_directory(demo_dir, filename)
+        return send_from_directory('.', filename)
+    except Exception as e:
+        logger.error(f"Error serving file {filename}: {e}")
+        return f"File not found: {filename}", 404
+
+@app.route('/api/health', methods=['GET'])
+def health_proxy():
+    try:
+        response = requests.get(f"{ML_SERVER_URL}/health", timeout=5)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({'status': 'error', 'message': 'ML server not responding'}), 503
+
+@app.route('/api/predict', methods=['POST'])
+def predict_proxy():
+    try:
+        response = requests.post(f"{ML_SERVER_URL}/predict", json=request.json, timeout=10)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Prediction request failed: {e}")
+        return jsonify({'error': 'ML server error'}), 503
+
+@app.route('/api/reset', methods=['POST'])
+def reset_proxy():
+    try:
+        response = requests.post(f"{ML_SERVER_URL}/reset", timeout=5)
+        return jsonify(response.json()), response.status_code
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 503
+
+if __name__ == '__main__':
+    logger.info("Starting proxy server on port 8082...")
+    app.run(host='0.0.0.0', port=8082, debug=False)
+PROXYEOF
+
+# Make files executable
+chmod +x /workshop/hush-mesh/ml/ml_api_server.py
+chmod +x /workshop/hush-mesh/proxy_server.py
+
+# Start ML server
+echo "▶️  Starting ML server..."
+cd /workshop/hush-mesh/ml
+python3 ml_api_server.py > /tmp/ml_server.log 2>&1 &
+ML_PID=$!
+echo "   ML Server PID: $ML_PID"
+sleep 3
+
+# Start proxy server
+echo "▶️  Starting proxy server..."
+cd /workshop/hush-mesh
+python3 proxy_server.py > /tmp/proxy_server.log 2>&1 &
+PROXY_PID=$!
+echo "   Proxy Server PID: $PROXY_PID"
+sleep 2
+
+echo ""
+echo "======================================"
+echo "✅ Deployment complete!"
+echo ""
+echo "📊 Server Status:"
+echo "   ML Server: http://localhost:9000 (PID: $ML_PID)"
+echo "   Proxy Server: http://localhost:8082 (PID: $PROXY_PID)"
+echo ""
+echo "📋 Logs:"
+echo "   ML Server: /tmp/ml_server.log"
+echo "   Proxy Server: /tmp/proxy_server.log"
+echo ""
+echo "🧪 Run verification:"
+echo "   cd /workshop/hush-mesh && python3 verify_ml_integration.py"
+echo ""
+echo "🌐 Access demo:"
+echo "   https://d3pka9yj6j75yn.cloudfront.net/ports/8082/enhanced_multi_route.html"
+echo "======================================"

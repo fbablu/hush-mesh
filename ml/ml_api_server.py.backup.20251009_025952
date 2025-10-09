@@ -1,5 +1,5 @@
+# hush-mesh/ml/ml_api_server.py
 #!/usr/bin/env python3
-# Fixed version with proper class inheritance
 import json
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -22,6 +22,25 @@ try:
 except ImportError as e:
     print(f"Warning: PyTorch not available ({e}). Using simulation mode.")
     TORCH_AVAILABLE = False
+    # Mock torch classes for compatibility
+    class MockModule:
+        def __init__(self):
+            pass
+        def eval(self):
+            pass
+        def load_state_dict(self, state_dict):
+            pass
+    
+    class MockTorch:
+        @staticmethod
+        def load(path, map_location=None):
+            return {}
+        @staticmethod
+        def FloatTensor(data):
+            return np.array(data)
+    
+    torch = MockTorch()
+    nn = type('nn', (), {'Module': MockModule})()
 
 app = Flask(__name__)
 CORS(app)
@@ -29,13 +48,12 @@ CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Define model classes based on PyTorch availability
-if TORCH_AVAILABLE:
-    class MaritimeThreatDetector(nn.Module):
-        def __init__(self, input_size=15, hidden_size=128, num_classes=8):
+class MaritimeThreatDetector:
+    def __init__(self, input_size=15, hidden_size=128, num_classes=8):
+        self.input_size = input_size
+        self.num_classes = num_classes
+        if TORCH_AVAILABLE:
             super(MaritimeThreatDetector, self).__init__()
-            self.input_size = input_size
-            self.num_classes = num_classes
             self.conv1 = nn.Conv1d(input_size, 64, kernel_size=3, padding=1)
             self.conv2 = nn.Conv1d(64, 128, kernel_size=3, padding=1)
             self.lstm = nn.LSTM(128, hidden_size, batch_first=True, bidirectional=True)
@@ -49,7 +67,8 @@ if TORCH_AVAILABLE:
             self.relu = nn.ReLU()
             self.softmax = nn.Softmax(dim=1)
         
-        def forward(self, x):
+    def forward(self, x):
+        if TORCH_AVAILABLE:
             x = x.unsqueeze(2)
             x = self.relu(self.conv1(x))
             x = self.relu(self.conv2(x))
@@ -58,40 +77,32 @@ if TORCH_AVAILABLE:
             x = self.dropout(lstm_out[:, -1, :])
             x = self.classifier(x)
             return self.softmax(x)
-else:
-    class MaritimeThreatDetector:
-        def __init__(self, input_size=15, hidden_size=128, num_classes=8):
-            self.input_size = input_size
-            self.num_classes = num_classes
-        
-        def forward(self, x):
+        else:
             if NUMPY_AVAILABLE:
                 return np.random.dirichlet(np.ones(self.num_classes))
             else:
+                # Pure Python fallback
                 probs = [random.random() for _ in range(self.num_classes)]
                 total = sum(probs)
                 return [p/total for p in probs]
-        
-        def eval(self):
-            pass
-        
-        def load_state_dict(self, state_dict):
-            pass
-        
-        def __call__(self, x):
-            return self.forward(x)
+    
+    def eval(self):
+        pass
+    
+    def load_state_dict(self, state_dict):
+        pass
 
 # Load model
 model = None
 try:
     model = MaritimeThreatDetector()
-    if TORCH_AVAILABLE:
-        state_dict = torch.load('/workshop/hush-mesh/models/model.pth', map_location='cpu')
-        model.load_state_dict(state_dict)
+    state_dict = torch.load('/workshop/hush-mesh/models/model.pth', map_location='cpu')
+    model.load_state_dict(state_dict)
     model.eval()
     logger.info("Model loaded successfully")
 except Exception as e:
     logger.error(f"Error loading model: {e}")
+    # Create model with random weights as fallback
     model = MaritimeThreatDetector()
     model.eval()
     logger.warning("Using model with random weights")
@@ -143,58 +154,50 @@ def predict():
         data = request.json
         sensor_data = data.get('sensor_data', {})
         
+        # Extract features
         features = extract_features(sensor_data)
-        
         if TORCH_AVAILABLE:
             input_tensor = torch.FloatTensor(features).unsqueeze(0)
-            logger.info(f"Input tensor shape: {input_tensor.shape}")
-        elif NUMPY_AVAILABLE:
-            input_tensor = np.array(features)
-            logger.info(f"Input array shape: {input_tensor.shape}")
         else:
-            input_tensor = features
-            logger.info(f"Input list length: {len(input_tensor)}")
+            input_tensor = features if not NUMPY_AVAILABLE else np.array(features)
+        logger.info(f"Input tensor shape: {input_tensor.shape}")
         
+        # Run inference
         if TORCH_AVAILABLE:
             with torch.no_grad():
                 outputs = model(input_tensor)
                 probabilities = outputs.cpu().numpy()[0]
                 logger.info(f"Model output shape: {outputs.shape}")
         else:
-            probabilities = model(input_tensor)
+            # Simulation mode
+            probabilities = model.forward(input_tensor)
             logger.info(f"Simulation mode - generated probabilities")
             
-        threat_classes = [
-            'small_fast_craft', 'floating_mine_like_object', 'submarine_periscope',
-            'debris_field', 'fishing_vessel', 'cargo_ship', 'research_vessel', 'unknown'
-        ]
-        
-        if NUMPY_AVAILABLE and not isinstance(probabilities, list):
-            predicted_class_idx = int(np.argmax(probabilities))
-        else:
-            predicted_class_idx = probabilities.index(max(probabilities)) if isinstance(probabilities, list) else int(np.argmax(probabilities))
-        
-        predicted_class = threat_classes[predicted_class_idx]
-        confidence = float(probabilities[predicted_class_idx])
-        is_threat = predicted_class_idx < 4
-        
-        all_probs = {}
-        for i, cls in enumerate(threat_classes):
-            all_probs[cls] = float(probabilities[i])
-        
-        logger.info(f"Prediction: {predicted_class} ({confidence:.2%}) - Threat: {is_threat}")
-        
-        return jsonify({
-            'threat_detected': bool(is_threat),
-            'threat_type': str(predicted_class),
-            'confidence': float(confidence),
-            'all_probabilities': all_probs
-        })
-        
+            # Threat classes
+            threat_classes = [
+                'small_fast_craft', 'floating_mine_like_object', 'submarine_periscope',
+                'debris_field', 'fishing_vessel', 'cargo_ship', 'research_vessel', 'unknown'
+            ]
+            
+            if NUMPY_AVAILABLE:
+                predicted_class_idx = np.argmax(probabilities)
+            else:
+                predicted_class_idx = probabilities.index(max(probabilities))
+            predicted_class = threat_classes[predicted_class_idx]
+            confidence = float(probabilities[predicted_class_idx])
+            
+            # Determine if it's a threat (first 4 classes are threats)
+            is_threat = predicted_class_idx < 4
+            
+            return jsonify({
+                'threat_detected': bool(is_threat),
+                'threat_type': str(predicted_class),
+                'confidence': float(confidence),
+                'all_probabilities': {cls: float(prob) for cls, prob in zip(threat_classes, probabilities)}
+            })
+            
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/', methods=['GET'])
@@ -218,4 +221,4 @@ def reset():
     return jsonify({'status': 'reset'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=9000, debug=False)
+    app.run(host='0.0.0.0', port=9000, debug=True)
