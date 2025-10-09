@@ -1,0 +1,80 @@
+digraph "Maritime ACPS - AWS Architecture" {
+	graph [fontcolor="#2D3436" fontname="Sans-Serif" fontsize=15 label="Maritime ACPS - AWS Architecture" nodesep=0.60 pad=2.0 rankdir=TB ranksep=0.75 splines=ortho]
+	node [fixedsize=true fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 height=1.4 imagescale=true labelloc=b shape=box style=rounded width=1.4]
+	edge [color="#7B8894"]
+	subgraph "cluster_Edge Devices (IoT Greengrass)" {
+		graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="Edge Devices (IoT Greengrass)" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		c813ea97c9164a4ab0d92df485aaa56c [label="Edge Agent 1
+(Drone/Vessel)" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/iot/iot-greengrass.png" shape=none]
+		"31aab6f270dc4587a9daf952cbb283fd" [label="Edge Agent 2
+(Drone/Vessel)" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/iot/iot-greengrass.png" shape=none]
+		"9704dae94dc34d999f54760b1e2560e9" [label="Edge Agent 3
+(Drone/Vessel)" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/iot/iot-greengrass.png" shape=none]
+	}
+	subgraph "cluster_AWS Cloud" {
+		graph [bgcolor="#E5F5FD" fontname="Sans-Serif" fontsize=12 label="AWS Cloud" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+		subgraph "cluster_IoT & Data Ingestion" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="IoT & Data Ingestion" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"7b01c79e66ca4ec3b30bb81c49cb9efc" [label="IoT Core
+MQTT Broker" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/iot/iot-core.png" shape=none]
+			"0d137c76ca464524bc888c1f6156536c" [label="Kinesis Streams
+Telemetry" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/analytics/kinesis-data-streams.png" shape=none]
+		}
+		subgraph "cluster_Processing & Fusion" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="Processing & Fusion" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"37740386b23747fc92c7bb2434410695" [label="Lambda
+Threat Fusion" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/compute/lambda.png" shape=none]
+			ec70a50c146742cf9ee0b146c1e798ac [label="DynamoDB
+Event Storage" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/database/dynamodb.png" shape=none]
+		}
+		subgraph "cluster_ML Pipeline" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="ML Pipeline" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"470d7f7654bb41d7a22a2dbbe348e5fd" [label="SageMaker
+Training & Neo" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/ml/sagemaker.png" shape=none]
+			"8e2ebafbd58d49b289c41cabda2043ac" [label="S3
+Model Artifacts" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/storage/simple-storage-service-s3.png" shape=none]
+		}
+		subgraph "cluster_Backend Services" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="Backend Services" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"3f02e1bb068e489191242a562ecbeb68" [label="ECS Fargate
+Mission Planner" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/compute/elastic-container-service.png" shape=none]
+			b97d135f622a4e05935973775a8ecc8f [label="API Gateway" height=1.9 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/network/api-gateway.png" shape=none]
+		}
+		subgraph cluster_Frontend {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label=Frontend labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"6e3719b344e044eea991dd5907878ca0" [label=CloudFront height=1.9 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/network/cloudfront.png" shape=none]
+			"33151ec820ff4dacb0978447e42d29a9" [label="S3
+Static Website" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/storage/simple-storage-service-s3.png" shape=none]
+			"74ea2d8e6ace4cedb10dfe91244c4c56" [label="Cognito
+Auth" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/security/cognito.png" shape=none]
+		}
+		subgraph "cluster_Security & Monitoring" {
+			graph [bgcolor="#EBF3E7" fontname="Sans-Serif" fontsize=12 label="Security & Monitoring" labeljust=l pencolor="#AEB6BE" rankdir=LR shape=box style=rounded]
+			"77998c97cd9b4ee495005d70c31e36e6" [label="KMS
+Encryption" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/security/key-management-service.png" shape=none]
+			bdd21b0ac5f34b92861c07b9afccf97c [label="CloudWatch
+Logs & Metrics" height=2.3 image="/home/participant/.local/lib/python3.11/site-packages/resources/aws/management/cloudwatch.png" shape=none]
+		}
+	}
+	c813ea97c9164a4ab0d92df485aaa56c -> "7b01c79e66ca4ec3b30bb81c49cb9efc" [label="MQTT Telemetry" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"31aab6f270dc4587a9daf952cbb283fd" -> "7b01c79e66ca4ec3b30bb81c49cb9efc" [label="MQTT Telemetry" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"9704dae94dc34d999f54760b1e2560e9" -> "7b01c79e66ca4ec3b30bb81c49cb9efc" [label="MQTT Telemetry" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"7b01c79e66ca4ec3b30bb81c49cb9efc" -> "0d137c76ca464524bc888c1f6156536c" [label=Stream dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"0d137c76ca464524bc888c1f6156536c" -> "37740386b23747fc92c7bb2434410695" [label=Process dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"37740386b23747fc92c7bb2434410695" -> ec70a50c146742cf9ee0b146c1e798ac [label="Store Events" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"37740386b23747fc92c7bb2434410695" -> "3f02e1bb068e489191242a562ecbeb68" [label=Trigger dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"470d7f7654bb41d7a22a2dbbe348e5fd" -> "8e2ebafbd58d49b289c41cabda2043ac" [label="Deploy Models" dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8e2ebafbd58d49b289c41cabda2043ac" -> c813ea97c9164a4ab0d92df485aaa56c [label=Download dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8e2ebafbd58d49b289c41cabda2043ac" -> "31aab6f270dc4587a9daf952cbb283fd" [label=Download dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"8e2ebafbd58d49b289c41cabda2043ac" -> "9704dae94dc34d999f54760b1e2560e9" [label=Download dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"3f02e1bb068e489191242a562ecbeb68" -> b97d135f622a4e05935973775a8ecc8f [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	b97d135f622a4e05935973775a8ecc8f -> "6e3719b344e044eea991dd5907878ca0" [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"33151ec820ff4dacb0978447e42d29a9" -> "6e3719b344e044eea991dd5907878ca0" [dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"74ea2d8e6ace4cedb10dfe91244c4c56" -> "6e3719b344e044eea991dd5907878ca0" [label=Auth dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13]
+	"77998c97cd9b4ee495005d70c31e36e6" -> ec70a50c146742cf9ee0b146c1e798ac [label=Encrypt dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	"77998c97cd9b4ee495005d70c31e36e6" -> "8e2ebafbd58d49b289c41cabda2043ac" [label=Encrypt dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	"77998c97cd9b4ee495005d70c31e36e6" -> "33151ec820ff4dacb0978447e42d29a9" [label=Encrypt dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	bdd21b0ac5f34b92861c07b9afccf97c -> "7b01c79e66ca4ec3b30bb81c49cb9efc" [label=Monitor dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	bdd21b0ac5f34b92861c07b9afccf97c -> "37740386b23747fc92c7bb2434410695" [label=Monitor dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+	bdd21b0ac5f34b92861c07b9afccf97c -> "3f02e1bb068e489191242a562ecbeb68" [label=Monitor dir=forward fontcolor="#2D3436" fontname="Sans-Serif" fontsize=13 style=dashed]
+}
