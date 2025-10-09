@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maritime ACPS - React Components v4.0</title>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <title>Maritime ACPS - Enhanced Multi-Route Planning</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -153,7 +150,6 @@
             };
             
             const detectObjects = () => {
-                // Simplified detection without ML calls
                 marineObjects.current.forEach((obj, i) => {
                     const distance = Math.sqrt((convoy.x - obj.x)**2 + (convoy.y - obj.y)**2);
                     if (distance < obj.radius * 2.0) {
