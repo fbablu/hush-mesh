@@ -12,6 +12,10 @@
   <a href="https://mqtt.org/" target="_blank"><img src="https://img.shields.io/badge/MQTT-660066?style=for-the-badge&logo=mqtt&logoColor=white" alt="MQTT"></a>
 </p>
 
+<h1 align="center">
+  <img src="./aws_architecture.png" alt="AWS Diagram"/>  
+</h1>
+
 # Overview
 
 HUSH-MESH is an AWS-first maritime threat detection and convoy protection system leveraging machine learning, edge computing, and real-time path planning. The system deploys autonomous drone networks for defensive surveillance and threat assessment in maritime environments.
