@@ -1,113 +1,235 @@
-# Maritime Autonomous Convoy Protection System (ACPS)
+<h1 align="center">
+  <img src="./hushmesh_logo.svg" alt="HUSH-MESH Logo" width="800"/>
+  <br>
+  <i>Hybrid, Ultra-silent, Self-Healing Drone Mesh</i>
+</h1>
 
-AWS-first maritime threat detection and convoy protection system using ML, edge computing, and real-time path planning.
+<p align="center">
+  <a href="https://www.python.org/" target="_blank"><img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://flask.palletsprojects.com/" target="_blank"><img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask"></a>
+  <a href="https://pytorch.org/" target="_blank"><img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch"></a>
+  <a href="https://aws.amazon.com/" target="_blank"><img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS"></a>
+  <a href="https://mqtt.org/" target="_blank"><img src="https://img.shields.io/badge/MQTT-660066?style=for-the-badge&logo=mqtt&logoColor=white" alt="MQTT"></a>
+</p>
 
-## Quick Start - Local Development
+# Overview
 
-### 1. Install Dependencies
+HUSH-MESH is an AWS-first maritime threat detection and convoy protection system leveraging machine learning, edge computing, and real-time path planning. The system deploys autonomous drone networks for defensive surveillance and threat assessment in maritime environments.
+
+**Key Capabilities**: Real-time threat detection • Multi-sensor fusion • Edge ML inference • Self-healing mesh networks • Dynamic route optimization
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+Ensure you have Python 3.9+ installed:
+
 ```bash
-pip install flask flask-cors fastapi uvicorn paho-mqtt
+python3 --version
 ```
 
-### 2. Start All Servers
-```bash
-# Terminal 1: Backend API Server (Port 8000)
-cd backend
-python3 app.py
+Install required dependencies:
 
-# Terminal 2: ML API Server (Port 9000) 
+```bash
+pip install flask flask-cors fastapi uvicorn paho-mqtt torch numpy
+```
+
+### Starting the System
+
+#### 1. Reset Any Existing Processes
+
+```bash
+pkill -f "python.*server" && pkill -f "python.*app" && pkill -f "http.server"
+```
+
+#### 2. Start ML API Server (Port 9000)
+
+```bash
 cd ml
-python3 ml_api_server.py
-
-# Terminal 3: Demo Server (Port 8081)
-cd demo
-python3 -m http.server 8081
+export PYTHONPATH=/home/participant/.local/lib/python3.11/site-packages:$PYTHONPATH
+python3 ml_api_server.py > /tmp/ml_server.log 2>&1 &
 ```
 
-### 3. Verify Servers Running
-```bash
-# Test Backend (Port 8000)
-curl http://localhost:8000/api/convoy
+#### 3. Start Demo Server (Port 8081)
 
-# Test ML API (Port 9000)
+```bash
+cd demo
+python3 -m http.server 8081 > /tmp/demo_server.log 2>&1 &
+```
+
+### Verify System Status
+
+Check that all servers are running:
+
+```bash
+# Check ML API Server
 curl http://localhost:9000/health
 
-# Test Demo Server (Port 8081)
+# Check Demo Server
 curl http://localhost:8081/
+
+# View server logs
+tail -f /tmp/ml_server.log
+tail -f /tmp/demo_server.log
 ```
 
-### 4. Access Demos
+---
+
+## Access Points
+
+### Interactive Demos
+
 - **Enhanced Multi-Route Demo**: http://localhost:8081/enhanced_multi_route.html
-- **ML Test Page**: http://localhost:8081/test_ml.html
-- **Simple CLI Demo**: `python3 simple_demo.py`
+- **ML Test Interface**: http://localhost:8081/test_ml.html
 
-### 5. Frontend Access URLs
-```bash
-# Demo Server (Port 8081) - HTML Demos
-http://localhost:8081/enhanced_multi_route.html
-http://localhost:8081/test_ml.html
+### API Endpoints
 
-# ML API Server (Port 9000) - Direct API Access
-http://localhost:9000/health
-http://localhost:9000/
+#### ML API Server (Port 9000)
+- `GET /health` – Health check and server status
+- `POST /predict` – Threat prediction inference
+- `POST /reset` – Reset model state
+
+#### Demo Server (Port 8081)
+- Serves static HTML demos and visualizations
+
+---
+
+## System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Edge Layer    │    │   Cloud Layer   │    │  Dashboard UI   │
+│                 │    │                 │    │                 │
+│ • Greengrass    │◄──►│ • IoT Core      │◄──►│ • React App     │
+│ • ML Models     │    │ • Kinesis       │    │ • Real-time Map │
+│ • Sensors       │    │ • Lambda        │    │ • WebSocket     │
+│ • MQTT Comms    │    │ • DynamoDB      │    │ • Cognito       │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## Server Endpoints
+**Core Technologies**:
+- **Edge Computing**: AWS IoT Greengrass + SageMaker Neo optimized models
+- **Cloud Infrastructure**: Kinesis Streams + Lambda + DynamoDB + ECS Fargate
+- **ML Pipeline**: SageMaker training with maritime threat detection models
+- **Communication**: MQTT mesh networking for resilient edge coordination
 
-### Backend API (Port 8000)
-- `GET /api/convoy` - Convoy status
-- `POST /api/mission/start` - Start mission
-- `WebSocket /ws/telemetry` - Real-time updates
+---
 
-### ML API (Port 9000)
-- `GET /health` - Health check
-- `POST /predict` - Threat prediction
-- `GET /` - Server status
+## Development Workflow
 
-### Demo Server (Port 8081)
-- Static file server for HTML demos
+### Running Tests
 
-## Troubleshooting
-
-### Reset and Restart All Servers
 ```bash
-# Kill all processes
-pkill -f "python.*server" && pkill -f "python.*app" && pkill -f "http.server"
+# Test ML inference
+python3 test_ml_integration.py
 
-# Restart (run each in separate terminal)
-cd backend && python3 app.py
-cd ml && python3 ml_api_server.py  
-cd demo && python3 -m http.server 8081
+# Test convoy simulation
+python3 simple_demo.py
 ```
 
-### Check Running Processes
+### Monitoring Logs
+
 ```bash
-netstat -tlnp | grep -E ":(8000|8081|9000)"
+# Monitor ML server
+tail -f /tmp/ml_server.log
+
+# Monitor demo server
+tail -f /tmp/demo_server.log
+
+# Check for errors
+grep -i error /tmp/ml_server.log
 ```
 
-## Architecture
+### Troubleshooting
 
-- **Edge**: IoT Greengrass + SageMaker Neo optimized models
-- **Cloud**: Kinesis + Lambda + DynamoDB + ECS Fargate
-- **ML**: SageMaker training pipeline with maritime threat detection
-- **UI**: React dashboard with real-time convoy tracking
+#### Servers Won't Start
 
-## Security Notice
+```bash
+# Check port availability
+netstat -tlnp | grep -E ":(8081|9000)"
 
-⚠️ **DEFENSIVE SYSTEM ONLY** - All engagement decisions require human authorization. No automated kinetic responses.
+# Force kill and restart
+pkill -9 -f "python.*server"
+pkill -9 -f "http.server"
 
-See `docs/deploy_instructions.md` for complete deployment guide.
+# Restart servers (run commands from steps 2-3 above)
+```
 
+#### ML Model Issues
 
+```bash
+# Verify model file exists
+ls -lh models/model.pth
 
-0) 
-Kill and reset the drones
-pkill -f "python.*server" && pkill -f "python.*app" && pkill -f "http.server"
+# Check Python path
+echo $PYTHONPATH
 
-1) 
-starting ML API Server:
-export PYTHONPATH=/home/participant/.local/lib/python3.11/site-packages:$PYTHONPATH && python3 ml_api_server.py > /tmp/ml_server.log 2>&1 &
+# Reinstall dependencies
+pip install --force-reinstall torch numpy
+```
 
+#### Connection Refused Errors
 
-2) 
-python3 -m http.server 8081 > /tmp/demo_server.log 2>&1 &
+Ensure all servers are running and listening on correct ports:
+
+```bash
+ps aux | grep python
+netstat -tlnp | grep LISTEN
+```
+
+---
+
+## Deployment to AWS
+
+For production deployment with full AWS integration:
+
+1. Configure AWS CLI with appropriate credentials
+2. Deploy infrastructure using CDK/CloudFormation
+3. Set up IoT Greengrass on edge devices
+4. Deploy ML models to SageMaker endpoints
+5. Configure Kinesis streams for telemetry ingestion
+
+See `docs/deploy_instructions.md` for comprehensive deployment guide.
+
+---
+
+## Project Structure
+
+```
+hush-mesh/
+├── ml/                     # ML inference server
+│   ├── ml_api_server.py   # Flask API for threat detection
+│   └── models/            # Trained PyTorch models
+├── demo/                   # HTML demos and visualizations
+│   ├── enhanced_multi_route.html
+│   └── test_ml.html
+├── backend/               # Backend API server (optional)
+├── docs/                  # Documentation
+│   ├── architecture.md
+│   └── deploy_instructions.md
+└── README.md
+```
+
+---
+
+## Security & Ethics
+
+**Human-in-the-Loop Design**: All engagement decisions require explicit human authorization. The system provides threat assessment and recommendations only.
+
+**Defensive Posture**: System is designed exclusively for defensive maritime convoy protection. No autonomous offensive capabilities.
+
+**Data Privacy**: Synthetic training data only. No PII collection. All telemetry encrypted in transit and at rest.
+
+---
+
+## License
+
+[MIT License](./LICENSE)
+
+---
+
+**Developed for**: AWS Maritime Defense Hackathon  
+**Team**: Clankers
+**Status**: Active Development – MVP Complete
