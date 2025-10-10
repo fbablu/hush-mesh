@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maritime ACPS - Enhanced Multi-Route Planning</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0e1a; color: #fff; overflow: hidden; }
+        
+        .dashboard { display: grid; grid-template-columns: 280px 1fr 320px; height: 100vh; }
+        
+        .sidebar { background: rgba(255,255,255,0.05); padding: 1rem; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto; }
+        .sidebar h3 { color: #00ff88; margin-bottom: 1rem; font-size: 1rem; }
+        
+        .map-container { position: relative; background: #1a1a2e; overflow: hidden; }
+        .map-canvas { width: 100%; height: 100%; background: linear-gradient(45deg, #16213e 0%, #0f3460 100%); position: relative; }
+        
+        .convoy { position: absolute; width: 20px; height: 20px; background: #00ff88; border-radius: 50%; 
+                 box-shadow: 0 0 20px #00ff88; transition: all 0.3s ease; z-index: 10; }
+        .convoy::after { content: '🚢'; position: absolute; top: -5px; left: -2px; font-size: 16px; }
+        
+        .object { position: absolute; width: 15px; height: 15px; border-radius: 50%; z-index: 5; transition: all 0.3s ease; }
+        .object.threat { background: #ff4444; box-shadow: 0 0 15px #ff4444; }
+        .object.benign { background: #4ecdc4; box-shadow: 0 0 15px #4ecdc4; }
+        .object.unknown { background: #ffaa00; box-shadow: 0 0 15px #ffaa00; }
+        
+        .destination { position: absolute; width: 15px; height: 15px; background: #ff6b6b; border-radius: 50%;
+                      box-shadow: 0 0 15px #ff6b6b; z-index: 8; text-align: center; line-height: 15px; }
+        
+        .path-optimal { position: absolute; height: 3px; background: linear-gradient(90deg, #00ff88, #ffaa00);
+                       box-shadow: 0 0 8px rgba(0,255,136,0.8); z-index: 4; transform-origin: left center; }
+        .path-fastest { position: absolute; height: 2px; background: linear-gradient(90deg, #ff6b6b, #ffa500);
+                       box-shadow: 0 0 6px rgba(255,107,107,0.6); z-index: 3; transform-origin: left center; opacity: 0.7; }
+        .path-safest { position: absolute; height: 2px; background: linear-gradient(90deg, #4ecdc4, #45b7d1);
+                      box-shadow: 0 0 6px rgba(78,205,196,0.6); z-index: 3; transform-origin: left center; opacity: 0.7; }
+        
+        .threat-zone { position: absolute; border: 2px dashed #ff4444; border-radius: 50%;
+                      background: rgba(255,68,68,0.1); z-index: 1; transition: all 0.3s ease; }
+        
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        @keyframes pathCalculation { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+        
+        .status-panel { background: rgba(0,0,0,0.3); padding: 0.8rem; margin-bottom: 0.8rem; border-radius: 6px; }
+        .status-item { margin: 0.3rem 0; padding: 0.4rem; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 0.85rem; }
+        
+        .threat-alert { background: rgba(255,68,68,0.2); border-left: 4px solid #ff4444; }
+        .safe-status { background: rgba(0,255,136,0.2); border-left: 4px solid #00ff88; }
+        .ml-analyzing { background: rgba(255,170,0,0.2); border-left: 4px solid #ffaa00; }
+        
+        .route-option { background: rgba(255,255,255,0.08); border-radius: 6px; padding: 0.8rem; margin: 0.5rem 0; 
+                       border-left: 4px solid #666; cursor: pointer; transition: all 0.3s ease; }
+        .route-option:hover { background: rgba(255,255,255,0.12); }
+        .route-option.selected { border-left-color: #00ff88; background: rgba(0,255,136,0.1); }
+        .route-option.optimal { border-left-color: #00ff88; }
+        .route-option.fastest { border-left-color: #ff6b6b; }
+        .route-option.safest { border-left-color: #4ecdc4; }
+        
+        .route-metrics { font-size: 0.75rem; margin-top: 0.3rem; }
+        .metric { display: inline-block; margin-right: 0.8rem; }
+        
+        .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); 
+                   background: rgba(0,0,0,0.8); padding: 1rem; border-radius: 10px; }
+        .btn { background: #2a5298; color: white; border: none; padding: 0.6rem 1.2rem; 
+              border-radius: 5px; cursor: pointer; margin: 0 0.3rem; font-size: 0.85rem; }
+        .btn:hover { background: #1e3c72; }
+        .btn.danger { background: #ff4444; }
+        .btn.success { background: #00ff88; color: #000; }
+        
+        .metrics { font-size: 0.8rem; }
+        .metric-value { font-weight: bold; color: #00ff88; }
+        
+        .scenario-indicator { position: absolute; top: 15px; left: 15px; 
+                            background: rgba(0,0,0,0.8); padding: 0.8rem; border-radius: 6px; }
+        
+        .calculation-status { position: absolute; top: 15px; right: 15px;
+                            background: rgba(0,0,0,0.8); padding: 0.8rem; border-radius: 6px;
+                            animation: pathCalculation 2s infinite; }
+        
+        .grid-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+                       background-image: 
+                         linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                         linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+                       background-size: 40px 40px; z-index: 0; }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <h3>🛡️ System Status</h3>
+            <div class="status-panel">
+                <div class="status-item safe-status" id="system-status">
+                    <strong>System: OPERATIONAL</strong>
+                </div>
+                <div class="status-item" id="ml-status">
+                    ML Model: Active (92.86% accuracy)
+                </div>
+                <div class="status-item" id="drone-status">
+                    Drones: 4/4 Online
+                </div>
+            </div>
+            
+            <h3>📊 Current Metrics</h3>
+            <div class="status-panel metrics">
+                <div>Position: <span class="metric-value" id="position">25.7617, -80.1918</span></div>
+                <div>Speed: <span class="metric-value" id="speed">12 knots</span></div>
+                <div>Heading: <span class="metric-value" id="heading">090°</span></div>
+                <div>Distance: <span class="metric-value" id="distance">8.2 km</span></div>
+                <div>ETA: <span class="metric-value" id="eta">24 min</span></div>
+            </div>
+            
+            <h3>🔍 ML Detections</h3>
+            <div class="status-panel" id="ml-panel">
+                <div class="status-item safe-status">
+                    No objects detected
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Map -->
+        <div class="map-container">
+            <div class="scenario-indicator">
+                <h4 id="scenario-title">Enhanced Multi-Route Planning</h4>
+                <p id="scenario-desc">ML-powered threat detection active...</p>
+            </div>
+            
+            <div class="calculation-status" id="calc-status" style="display: none;">
+                🧠 Analyzing Routes...
+            </div>
+            
+            <div class="map-canvas" id="map">
+                <div class="grid-overlay"></div>
+            </div>
+        </div>
+        
+        <!-- Right Sidebar -->
+        <div class="sidebar">
+            <h3>🗺️ Route Options</h3>
+            <div id="route-options">
+                <div class="route-option optimal selected" data-route="optimal">
+                    <strong>🎯 Optimal Route</strong>
+                    <div class="route-metrics">
+                        <span class="metric">Distance: <span id="optimal-distance">--</span></span>
+                        <span class="metric">Risk: <span id="optimal-risk">--</span></span>
+                        <span class="metric">Score: <span id="optimal-score">--</span></span>
+                    </div>
+                </div>
+                
+                <div class="route-option fastest" data-route="fastest">
+                    <strong>⚡ Fastest Route</strong>
+                    <div class="route-metrics">
+                        <span class="metric">Distance: <span id="fastest-distance">--</span></span>
+                        <span class="metric">Risk: <span id="fastest-risk">--</span></span>
+                        <span class="metric">Score: <span id="fastest-score">--</span></span>
+                    </div>
+                </div>
+                
+                <div class="route-option safest" data-route="safest">
+                    <strong>🛡️ Safest Route</strong>
+                    <div class="route-metrics">
+                        <span class="metric">Distance: <span id="safest-distance">--</span></span>
+                        <span class="metric">Risk: <span id="safest-risk">--</span></span>
+                        <span class="metric">Score: <span id="safest-score">--</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>📡 Path Analysis</h3>
+            <div class="status-panel">
+                <div class="status-item" id="path-analysis">
+                    Calculating multiple routes...
+                </div>
+                <div class="status-item" id="threat-consideration">
+                    ML Analysis: Pending
+                </div>
+                <div class="status-item" id="route-recommendation">
+                    Recommendation: Analyzing...
+                </div>
+            </div>
+            
+            <h3>🎯 Mission Log</h3>
+            <div class="status-panel" id="mission-log" style="height: 150px; overflow-y: auto; font-size: 0.75rem;">
+                <div>[00:00] Enhanced multi-route planning initialized</div>
+                <div>[00:00] ML threat detection active</div>
+                <div>[00:00] Calculating path alternatives</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn success" onclick="startDemo()">▶️ Start Demo</button>
+        <button class="btn" onclick="pauseDemo()">⏸️ Pause</button>
+        <button class="btn danger" onclick="stopDemo()">⏹️ Stop</button>
+        <button class="btn" onclick="resetDemo()">🔄 Reset</button>
+        <button class="btn" onclick="recalculateRoutes()">🧠 Recalculate</button>
+        <span style="margin-left: 1rem; color: #ccc;">Speed:</span>
+        <button class="btn" onclick="setSpeed(1)">1x</button>
+        <button class="btn" onclick="setSpeed(2)">2x</button>
+        <button class="btn" onclick="setSpeed(5)">5x</button>
+        <button class="btn" onclick="setSpeed(10)">10x</button>
+    </div>
+
+    <script>
+        console.log('Loading Enhanced Multi-Route Maritime Dashboard');
+        
+        class EnhancedMultiRouteMaritimeDashboard {
+            constructor() {
+                console.log('Initializing enhanced dashboard...');
+                this.convoy = { x: 100, y: 400, lat: 25.7617, lon: -80.1918 };
+                this.destination = { x: 700, y: 200, lat: 25.8200, lon: -80.1200 };
+                this.running = false;
+                this.speed = 1;
+                this.step = 0;
+                this.selectedRoute = 'optimal';
+                
+                // Enhanced mix of dynamic threats and benign objects
+                this.marineObjects = [
+                    // Aggressive intercepting threats
+                    { x: 300, y: 450, vx: -2, vy: -3, type: 'small_fast_craft', radius: 70, name: 'Pirate Skiff Alpha', speed: 3.5, behavior: 'intercept', isThreat: true },
+                    { x: 180, y: 200, vx: 2.5, vy: 1, type: 'small_fast_craft', radius: 65, name: 'Pirate Skiff Beta', speed: 3.2, behavior: 'intercept', isThreat: true },
+                    { x: 520, y: 480, vx: -1.8, vy: -2.5, type: 'small_fast_craft', radius: 60, name: 'Fast Attack Craft', speed: 4.0, behavior: 'intercept', isThreat: true },
+                    
+                    // Moving mines and obstacles
+                    { x: 500, y: 150, vx: 0, vy: 2, type: 'floating_mine_like_object', radius: 50, name: 'Drifting Mine', speed: 1.5, behavior: 'drift', isThreat: true },
+                    { x: 380, y: 80, vx: -1, vy: 1.5, type: 'floating_mine_like_object', radius: 45, name: 'Sea Mine', speed: 1.2, behavior: 'drift', isThreat: true },
+                    
+                    // Submarine threats
+                    { x: 650, y: 350, vx: -2, vy: 1, type: 'submarine_periscope', radius: 90, name: 'Sub Contact Alpha', speed: 2.0, behavior: 'patrol', isThreat: true },
+                    { x: 420, y: 180, vx: 1.5, vy: 2, type: 'submarine_periscope', radius: 85, name: 'Sub Contact Beta', speed: 1.8, behavior: 'patrol', isThreat: true },
+                    
+                    // Expanding debris fields
+                    { x: 150, y: 100, vx: 2, vy: 1, type: 'debris_field', radius: 95, name: 'Debris Field Alpha', speed: 0.8, behavior: 'expand', isThreat: true },
+                    { x: 600, y: 120, vx: -1, vy: 1.5, type: 'debris_field', radius: 80, name: 'Debris Field Beta', speed: 0.6, behavior: 'expand', isThreat: true },
+                    
+                    // Benign objects for ML testing
+                    { x: 400, y: 400, vx: 0.5, vy: 0, type: 'fishing_vessel', radius: 50, name: 'Fishing Boat', speed: 1.0, behavior: 'drift', isThreat: false },
+                    { x: 200, y: 300, vx: 0, vy: 0.8, type: 'cargo_ship', radius: 70, name: 'Cargo Ship', speed: 0.8, behavior: 'transit', isThreat: false },
+                    { x: 550, y: 450, vx: -0.5, vy: -0.5, type: 'research_vessel', radius: 45, name: 'Research Ship', speed: 1.2, behavior: 'survey', isThreat: false }
+                ];
+                
+                this.routes = {};
+                this.detectedObjects = new Set();
+                this.mlClassifications = new Map();
+                this.objectMovementPatterns = new Map();
+                this.calculationInProgress = false;
+                this.autoResetDisabled = false;
+                
+                this.initializeMap();
+                this.drawMarineObjects();
+                this.setupRouteSelection();
+                setTimeout(() => this.calculateMultipleRoutes(), 500);
+            }
+            
+            initializeMap() {
+                console.log('Initializing map...');
+                const map = document.getElementById('map');
+                
+                // Add convoy ship
+                const convoy = document.createElement('div');
+                convoy.className = 'convoy';
+                convoy.id = 'convoy';
+                convoy.style.left = this.convoy.x + 'px';
+                convoy.style.top = this.convoy.y + 'px';
+                convoy.style.position = 'absolute';
+                convoy.style.zIndex = '10';
+                map.appendChild(convoy);
+                
+                // Add destination target
+                const dest = document.createElement('div');
+                dest.className = 'destination';
+                dest.id = 'destination';
+                dest.style.left = this.destination.x + 'px';
+                dest.style.top = this.destination.y + 'px';
+                dest.style.position = 'absolute';
+                dest.style.zIndex = '8';
+                dest.innerHTML = '🎯';
+                dest.style.fontSize = '12px';
+                dest.style.textAlign = 'center';
+                dest.style.lineHeight = '15px';
+                map.appendChild(dest);
+            }
+            
+            drawMarineObjects() {
+                const map = document.getElementById('map');
+                
+                this.marineObjects.forEach((obj, i) => {
+                    const objEl = document.createElement('div');
+                    objEl.className = 'object unknown';
+                    objEl.id = `marine-object-${i}`;
+                    objEl.style.left = obj.x + 'px';
+                    objEl.style.top = obj.y + 'px';
+                    objEl.style.display = 'none';
+                    objEl.style.position = 'absolute';
+                    objEl.title = obj.name;
+                    
+                    // Different icons for different object types
+                    if (obj.type === 'small_fast_craft') objEl.innerHTML = '🚤';
+                    else if (obj.type === 'floating_mine_like_object') objEl.innerHTML = '💣';
+                    else if (obj.type === 'submarine_periscope') objEl.innerHTML = '🔭';
+                    else if (obj.type === 'debris_field') objEl.innerHTML = '🗑️';
+                    else if (obj.type === 'fishing_vessel') objEl.innerHTML = '🎣';
+                    else if (obj.type === 'cargo_ship') objEl.innerHTML = '🚢';
+                    else if (obj.type === 'research_vessel') objEl.innerHTML = '🔬';
+                    
+                    map.appendChild(objEl);
+                    
+                    const zone = document.createElement('div');
+                    zone.className = 'threat-zone';
+                    zone.id = `object-zone-${i}`;
+                    zone.style.left = (obj.x - obj.radius) + 'px';
+                    zone.style.top = (obj.y - obj.radius) + 'px';
+                    zone.style.width = (obj.radius * 2) + 'px';
+                    zone.style.height = (obj.radius * 2) + 'px';
+                    zone.style.display = 'none';
+                    zone.style.position = 'absolute';
+                    map.appendChild(zone);
+                    
+                    this.initializeObjectMovement(obj, i);
+                });
+            }
+            
+            initializeObjectMovement(obj, index) {
+                this.objectMovementPatterns.set(index, {
+                    originalX: obj.x,
+                    originalY: obj.y,
+                    patrolTime: 0,
+                    interceptTarget: null,
+                    lastDirectionChange: 0
+                });
+            }
+            
+            moveObject(obj, index) {
+                const pattern = this.objectMovementPatterns.get(index);
+                if (!pattern) return;
+                
+                pattern.patrolTime += 0.1;
+                
+                if (obj.behavior === 'intercept') {
+                    // Aggressive intercept behavior - move toward convoy
+                    const dx = this.convoy.x - obj.x;
+                    const dy = this.convoy.y - obj.y;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (distance > 50) {
+                        obj.x += (dx / distance) * obj.speed;
+                        obj.y += (dy / distance) * obj.speed;
+                    } else {
+                        // Circle around convoy when close
+                        obj.x += Math.cos(pattern.patrolTime) * obj.speed;
+                        obj.y += Math.sin(pattern.patrolTime) * obj.speed;
+                    }
+                } else if (obj.behavior === 'patrol') {
+                    // Patrol in expanding circles
+                    const radius = 50 + pattern.patrolTime * 10;
+                    obj.x = pattern.originalX + Math.cos(pattern.patrolTime * 0.5) * radius;
+                    obj.y = pattern.originalY + Math.sin(pattern.patrolTime * 0.5) * radius;
+                } else if (obj.behavior === 'drift') {
+                    // Drift with current, slight course changes
+                    if (pattern.patrolTime - pattern.lastDirectionChange > 5) {
+                        obj.vx += (Math.random() - 0.5) * 0.5;
+                        obj.vy += (Math.random() - 0.5) * 0.5;
+                        pattern.lastDirectionChange = pattern.patrolTime;
+                    }
+                    obj.x += obj.vx;
+                    obj.y += obj.vy;
+                } else if (obj.behavior === 'expand') {
+                    // Expanding debris field
+                    obj.radius = Math.min(obj.radius + 0.2, 120);
+                    obj.x += obj.vx * 0.5;
+                    obj.y += obj.vy * 0.5;
+                }
+                
+                // Keep objects within bounds
+                obj.x = Math.max(50, Math.min(750, obj.x));
+                obj.y = Math.max(50, Math.min(550, obj.y));
+            }
+            
+            setupRouteSelection() {
+                document.querySelectorAll('.route-option').forEach(option => {
+                    option.addEventListener('click', () => {
+                        document.querySelectorAll('.route-option').forEach(o => o.classList.remove('selected'));
+                        option.classList.add('selected');
+                        this.selectedRoute = option.dataset.route;
+                        this.updateActiveRoute();
+                        this.logMessage(`📍 Switched to ${option.dataset.route} route`);
+                    });
+                });
+            }
+            
+            async detectNearbyObjects() {
+                // Move objects dynamically
+                this.marineObjects.forEach((obj, i) => {
+                    this.moveObject(obj, i);
+                    
+                    const distance = Math.sqrt((this.convoy.x - obj.x)**2 + (this.convoy.y - obj.y)**2);
+                    
+                    // Larger detection range for more dynamic threat detection
+                    if (distance < obj.radius * 2.0) {
+                        if (!this.detectedObjects.has(i)) {
+                            this.logMessage(`📡 Object detected: ${obj.name}`);
+                            this.detectedObjects.add(i);
+                            
+                            // Send to ML model for classification
+                            this.classifyObjectWithML(obj, i);
+                        }
+                        document.getElementById(`marine-object-${i}`).style.display = 'block';
+                        this.updateObjectVisualPosition(obj, i);
+                    } else if (distance > obj.radius * 3.0) {
+                        document.getElementById(`marine-object-${i}`).style.display = 'none';
+                        document.getElementById(`object-zone-${i}`).style.display = 'none';
+                        this.detectedObjects.delete(i);
+                        this.mlClassifications.delete(i);
+                    }
+                });
+                
+                this.updateMLPanel();
+            }
+            
+            async classifyObjectWithML(obj, index) {
+                const sensorData = this.generateSensorDataForObject(obj);
+                
+                try {
+                    const response = await fetch('http://localhost:5000/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            convoy_id: 'enhanced_demo',
+                            sensor_data: sensorData
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const prediction = await response.json();
+                        this.mlClassifications.set(index, prediction);
+                        
+                        // Update object appearance based on ML classification
+                        const objEl = document.getElementById(`marine-object-${index}`);
+                        const zoneEl = document.getElementById(`object-zone-${index}`);
+                        
+                        if (prediction.threat_detected && prediction.confidence > 0.6) {
+                            objEl.className = 'object threat';
+                            zoneEl.style.display = 'block';
+                            zoneEl.style.borderColor = '#ff4444';
+                            this.logMessage(`🚨 ML classified as THREAT: ${obj.name} (${(prediction.confidence * 100).toFixed(1)}%)`);
+                        } else {
+                            objEl.className = 'object benign';
+                            zoneEl.style.display = 'none';
+                            this.logMessage(`✅ ML classified as BENIGN: ${obj.name} (${(prediction.confidence * 100).toFixed(1)}%)`);
+                        }
+                        
+                    } else {
+                        // Fallback classification
+                        this.mlClassifications.set(index, { 
+                            threat_detected: obj.isThreat, 
+                            confidence: 0.8, 
+                            threat_type: obj.type 
+                        });
+                    }
+                } catch (error) {
+                    console.warn('ML service error:', error);
+                    // Fallback classification
+                    this.mlClassifications.set(index, { 
+                        threat_detected: obj.isThreat, 
+                        confidence: 0.8, 
+                        threat_type: obj.type 
+                    });
+                }
+            }
+            
+            generateSensorDataForObject(obj) {
+                const baseData = {
+                    convoy_data: { speed_knots: 12, vessel_count: 4 },
+                    environmental_conditions: { sea_state: 2, visibility_km: 15, wind_speed_knots: 10, wave_height_m: 2 },
+                    data_quality: { sensor_reliability: 0.9 },
+                    drone_array: [{
+                        sensor_suite: {
+                            electro_optical: { visible_spectrum: { objects_detected: 1 }, infrared: { thermal_signatures: 1 } },
+                            radar: { contacts: 1 },
+                            acoustic: { hydrophone_data: { ambient_noise_db: 95 } },
+                            electronic_warfare: { rf_spectrum: { signals_detected: 3 } }
+                        },
+                        position: { altitude_m: 180 }
+                    }],
+                    threat_detections: [],
+                    ground_truth: { threat_present: obj.isThreat, threat_type: obj.type }
+                };
+                
+                // Modify sensor signatures based on object type
+                if (obj.type === 'small_fast_craft') {
+                    baseData.drone_array[0].sensor_suite.radar.contacts = 3;
+                    baseData.drone_array[0].sensor_suite.electronic_warfare.rf_spectrum.signals_detected = 8;
+                    baseData.drone_array[0].sensor_suite.acoustic.hydrophone_data.ambient_noise_db = 105;
+                } else if (obj.type === 'floating_mine_like_object') {
+                    baseData.drone_array[0].sensor_suite.radar.contacts = 2;
+                    baseData.drone_array[0].sensor_suite.acoustic.hydrophone_data.ambient_noise_db = 88;
+                } else if (obj.type === 'fishing_vessel') {
+                    baseData.drone_array[0].sensor_suite.radar.contacts = 1;
+                    baseData.drone_array[0].sensor_suite.electronic_warfare.rf_spectrum.signals_detected = 2;
+                    baseData.drone_array[0].sensor_suite.acoustic.hydrophone_data.ambient_noise_db = 98;
+                } else if (obj.type === 'cargo_ship') {
+                    baseData.drone_array[0].sensor_suite.radar.contacts = 4;
+                    baseData.drone_array[0].sensor_suite.electronic_warfare.rf_spectrum.signals_detected = 5;
+                    baseData.drone_array[0].sensor_suite.acoustic.hydrophone_data.ambient_noise_db = 102;
+                }
+                
+                return baseData;
+            }
+            
+            updateMLPanel() {
+                const panel = document.getElementById('ml-panel');
+                panel.innerHTML = '';
+                
+                if (this.detectedObjects.size === 0) {
+                    panel.innerHTML = '<div class="status-item safe-status">No objects in detection range</div>';
+                } else {
+                    this.detectedObjects.forEach(objIndex => {
+                        const obj = this.marineObjects[objIndex];
+                        const classification = this.mlClassifications.get(objIndex);
+                        const distance = Math.sqrt((this.convoy.x - obj.x)**2 + (this.convoy.y - obj.y)**2);
+                        
+                        const item = document.createElement('div');
+                        
+                        if (!classification) {
+                            item.className = 'status-item ml-analyzing';
+                            item.innerHTML = `
+                                <strong>${obj.name}</strong><br>
+                                ML Status: Analyzing... | Distance: ${Math.floor(distance * 10)}m
+                            `;
+                        } else {
+                            item.className = classification.threat_detected ? 'status-item threat-alert' : 'status-item safe-status';
+                            const actualThreat = obj.isThreat ? 'ACTUAL THREAT' : 'BENIGN';
+                            const mlResult = classification.threat_detected ? 'ML: THREAT' : 'ML: BENIGN';
+                            const correct = (classification.threat_detected === obj.isThreat) ? '✅' : '❌';
+                            
+                            item.innerHTML = `
+                                <strong>${obj.name}</strong> ${correct}<br>
+                                ${actualThreat} | ${mlResult} (${(classification.confidence * 100).toFixed(1)}%)<br>
+                                Distance: ${Math.floor(distance * 10)}m
+                            `;
+                        }
+                        
+                        panel.appendChild(item);
+                    });
+                }
+            }
+            
+            updateObjectVisualPosition(obj, index) {
+                const objEl = document.getElementById(`marine-object-${index}`);
+                const zoneEl = document.getElementById(`object-zone-${index}`);
+                
+                if (objEl && zoneEl) {
+                    objEl.style.left = obj.x + 'px';
+                    objEl.style.top = obj.y + 'px';
+                    
+                    zoneEl.style.left = (obj.x - obj.radius) + 'px';
+                    zoneEl.style.top = (obj.y - obj.radius) + 'px';
+                    zoneEl.style.width = (obj.radius * 2) + 'px';
+                    zoneEl.style.height = (obj.radius * 2) + 'px';
+                }
+            }
+            
+            calculateMultipleRoutes() {
+                this.calculationInProgress = true;
+                document.getElementById('calc-status').style.display = 'block';
+                
+                setTimeout(() => {
+                    // Only consider ML-confirmed threats for route planning
+                    const confirmedThreats = [];
+                    this.mlClassifications.forEach((classification, index) => {
+                        if (classification.threat_detected && classification.confidence > 0.6) {
+                            confirmedThreats.push(this.marineObjects[index]);
+                        }
+                    });
+                    
+                    this.routes = {
+                        optimal: this.generateRoute('optimal', confirmedThreats),
+                        fastest: this.generateRoute('fastest', confirmedThreats),
+                        safest: this.generateRoute('safest', confirmedThreats)
+                    };
+                    
+                    this.drawAllRoutes();
+                    this.updateRouteMetrics();
+                    this.updateActiveRoute();
+                    this.analyzeRoutes();
+                    
+                    this.calculationInProgress = false;
+                    document.getElementById('calc-status').style.display = 'none';
+                    
+                    this.logMessage(`🧠 Routes calculated with ${confirmedThreats.length} ML-confirmed threats`);
+                }, 1500);
+            }
+            
+            generateRoute(strategy, threats) {
+                const waypoints = [];
+                const steps = 8;
+                
+                for (let i = 1; i <= steps; i++) {
+                    const progress = i / steps;
+                    let x = this.convoy.x + (this.destination.x - this.convoy.x) * progress;
+                    let y = this.convoy.y + (this.destination.y - this.convoy.y) * progress;
+                    
+                    if (strategy === 'fastest') {
+                        // Direct route, minimal avoidance
+                    } else if (strategy === 'safest') {
+                        y -= 60 * Math.sin(progress * Math.PI);
+                        x += 20 * Math.cos(progress * Math.PI * 2);
+                    } else {
+                        // Optimal: avoid only ML-confirmed threats
+                        threats.forEach(threat => {
+                            const distance = Math.sqrt((x - threat.x)**2 + (y - threat.y)**2);
+                            if (distance < threat.radius + 40) {
+                                const avoidX = (x - threat.x) / distance * (threat.radius + 40);
+                                const avoidY = (y - threat.y) / distance * (threat.radius + 40);
+                                x = threat.x + avoidX;
+                                y = threat.y + avoidY;
+                            }
+                        });
+                    }
+                    
+                    waypoints.push({ x, y });
+                }
+                
+                const distance = this.calculateRouteDistance(waypoints);
+                const threatExposure = this.calculateThreatExposure(waypoints, threats);
+                const score = this.calculateRouteScore(distance, threatExposure, strategy);
+                
+                return {
+                    waypoints,
+                    metrics: {
+                        distance: distance.toFixed(1),
+                        threatExposure: threatExposure.toFixed(1),
+                        score: score.toFixed(0)
+                    }
+                };
+            }
+            
+            calculateRouteDistance(waypoints) {
+                let distance = 0;
+                let prev = this.convoy;
+                waypoints.forEach(wp => {
+                    distance += Math.sqrt((wp.x - prev.x)**2 + (wp.y - prev.y)**2);
+                    prev = wp;
+                });
+                return distance * 0.01;
+            }
+            
+            calculateThreatExposure(waypoints, threats) {
+                let exposure = 0;
+                waypoints.forEach(wp => {
+                    threats.forEach(threat => {
+                        const distance = Math.sqrt((wp.x - threat.x)**2 + (wp.y - threat.y)**2);
+                        if (distance < threat.radius * 1.5) {
+                            exposure += (threat.radius * 1.5 - distance) / threat.radius;
+                        }
+                    });
+                });
+                return exposure;
+            }
+            
+            calculateRouteScore(distance, threatExposure, strategy) {
+                if (strategy === 'fastest') {
+                    return 100 - distance * 3 - threatExposure * 1;
+                } else if (strategy === 'safest') {
+                    return 100 - threatExposure * 8 - distance * 0.5;
+                } else {
+                    return 100 - distance * 2 - threatExposure * 3;
+                }
+            }
+            
+            drawAllRoutes() {
+                document.querySelectorAll('.path-optimal, .path-fastest, .path-safest').forEach(el => el.remove());
+                
+                Object.keys(this.routes).forEach(strategy => {
+                    this.drawRoute(strategy, this.routes[strategy].waypoints);
+                });
+            }
+            
+            drawRoute(strategy, waypoints) {
+                const map = document.getElementById('map');
+                let prevPoint = this.convoy;
+                
+                waypoints.forEach(wp => {
+                    const line = document.createElement('div');
+                    line.className = `path-${strategy}`;
+                    line.style.position = 'absolute';
+                    
+                    const dx = wp.x - prevPoint.x;
+                    const dy = wp.y - prevPoint.y;
+                    const length = Math.sqrt(dx*dx + dy*dy);
+                    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                    
+                    line.style.left = prevPoint.x + 'px';
+                    line.style.top = prevPoint.y + 'px';
+                    line.style.width = length + 'px';
+                    line.style.transform = `rotate(${angle}deg)`;
+                    
+                    map.appendChild(line);
+                    prevPoint = wp;
+                });
+            }
+            
+            updateRouteMetrics() {
+                Object.keys(this.routes).forEach(strategy => {
+                    const metrics = this.routes[strategy].metrics;
+                    document.getElementById(`${strategy}-distance`).textContent = `${metrics.distance}km`;
+                    document.getElementById(`${strategy}-risk`).textContent = metrics.threatExposure;
+                    document.getElementById(`${strategy}-score`).textContent = metrics.score;
+                });
+            }
+            
+            updateActiveRoute() {
+                document.querySelectorAll('.path-optimal, .path-fastest, .path-safest').forEach(el => {
+                    el.style.opacity = '0.3';
+                });
+                
+                document.querySelectorAll(`.path-${this.selectedRoute}`).forEach(el => {
+                    el.style.opacity = '1';
+                    el.style.zIndex = '5';
+                });
+            }
+            
+            analyzeRoutes() {
+                const routes = this.routes;
+                const fastest = Object.keys(routes).reduce((a, b) => 
+                    parseFloat(routes[a].metrics.distance) < parseFloat(routes[b].metrics.distance) ? a : b);
+                const safest = Object.keys(routes).reduce((a, b) => 
+                    parseFloat(routes[a].metrics.threatExposure) < parseFloat(routes[b].metrics.threatExposure) ? a : b);
+                const highest_score = Object.keys(routes).reduce((a, b) => 
+                    parseFloat(routes[a].metrics.score) > parseFloat(routes[b].metrics.score) ? a : b);
+                
+                const analysis = `Fastest: ${fastest} | Safest: ${safest} | Best Score: ${highest_score}`;
+                
+                const threatCount = Array.from(this.mlClassifications.values()).filter(c => c.threat_detected && c.confidence > 0.6).length;
+                let recommendation;
+                if (threatCount === 0) {
+                    recommendation = 'No ML-confirmed threats - Fastest route recommended';
+                } else if (threatCount >= 3) {
+                    recommendation = 'Multiple threats confirmed - Safest route recommended';
+                } else {
+                    recommendation = 'Some threats detected - Optimal route recommended';
+                }
+                
+                document.getElementById('path-analysis').textContent = analysis;
+                document.getElementById('route-recommendation').textContent = recommendation;
+                document.getElementById('threat-consideration').textContent = `ML Analysis: ${threatCount} confirmed threats`;
+            }
+            
+            moveConvoy() {
+                if (!this.routes[this.selectedRoute]) return;
+                
+                const waypoints = this.routes[this.selectedRoute].waypoints;
+                if (waypoints.length === 0) return;
+                
+                const target = waypoints[0];
+                const dx = target.x - this.convoy.x;
+                const dy = target.y - this.convoy.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                
+                if (distance < 15) {
+                    waypoints.shift();
+                    if (waypoints.length === 0) {
+                        this.logMessage('🏁 Destination reached!');
+                        this.stop();
+                        return;
+                    }
+                } else {
+                    const speed = 3 * this.speed;
+                    this.convoy.x += (dx / distance) * speed;
+                    this.convoy.y += (dy / distance) * speed;
+                }
+                
+                document.getElementById('convoy').style.left = this.convoy.x + 'px';
+                document.getElementById('convoy').style.top = this.convoy.y + 'px';
+                
+                this.updateMetrics();
+            }
+            
+            updateMetrics() {
+                const distToDest = Math.sqrt((this.destination.x - this.convoy.x)**2 + (this.destination.y - this.convoy.y)**2) * 0.01;
+                
+                document.getElementById('position').textContent = 
+                    `${(this.convoy.lat + Math.random() * 0.001).toFixed(4)}, ${(this.convoy.lon + Math.random() * 0.001).toFixed(4)}`;
+                document.getElementById('distance').textContent = `${distToDest.toFixed(1)} km`;
+                document.getElementById('eta').textContent = `${Math.floor(distToDest * 2)} min`;
+                
+                const mlThreats = Array.from(this.mlClassifications.values()).filter(c => c.threat_detected && c.confidence > 0.6).length;
+                document.getElementById('scenario-desc').textContent = 
+                    `Following ${this.selectedRoute} route | ${mlThreats} ML-confirmed threats`;
+            }
+            
+            logMessage(message) {
+                const log = document.getElementById('mission-log');
+                const time = new Date().toLocaleTimeString().slice(0, 5);
+                const div = document.createElement('div');
+                div.textContent = `[${time}] ${message}`;
+                log.insertBefore(div, log.firstChild);
+                
+                while (log.children.length > 10) {
+                    log.removeChild(log.lastChild);
+                }
+            }
+            
+            start() {
+                if (this.running) return;
+                this.running = true;
+                this.autoResetDisabled = true;
+                this.logMessage('🚢 Enhanced multi-route demo started');
+                this.animate();
+            }
+            
+            pause() {
+                this.running = false;
+                this.logMessage('⏸️ Demo paused');
+            }
+            
+            stop() {
+                this.running = false;
+                this.logMessage('⏹️ Demo stopped');
+            }
+            
+            reset() {
+                this.running = false;
+                this.step = 0;
+                this.convoy = { x: 100, y: 400, lat: 25.7617, lon: -80.1918 };
+                this.detectedObjects.clear();
+                this.mlClassifications.clear();
+                this.autoResetDisabled = false;
+                
+                // Reset object positions
+                this.marineObjects = [
+                    { x: 300, y: 450, vx: -2, vy: -3, type: 'small_fast_craft', radius: 70, name: 'Pirate Skiff Alpha', speed: 3.5, behavior: 'intercept', isThreat: true },
+                    { x: 180, y: 200, vx: 2.5, vy: 1, type: 'small_fast_craft', radius: 65, name: 'Pirate Skiff Beta', speed: 3.2, behavior: 'intercept', isThreat: true },
+                    { x: 520, y: 480, vx: -1.8, vy: -2.5, type: 'small_fast_craft', radius: 60, name: 'Fast Attack Craft', speed: 4.0, behavior: 'intercept', isThreat: true },
+                    { x: 500, y: 150, vx: 0, vy: 2, type: 'floating_mine_like_object', radius: 50, name: 'Drifting Mine', speed: 1.5, behavior: 'drift', isThreat: true },
+                    { x: 380, y: 80, vx: -1, vy: 1.5, type: 'floating_mine_like_object', radius: 45, name: 'Sea Mine', speed: 1.2, behavior: 'drift', isThreat: true },
+                    { x: 650, y: 350, vx: -2, vy: 1, type: 'submarine_periscope', radius: 90, name: 'Sub Contact Alpha', speed: 2.0, behavior: 'patrol', isThreat: true },
+                    { x: 420, y: 180, vx: 1.5, vy: 2, type: 'submarine_periscope', radius: 85, name: 'Sub Contact Beta', speed: 1.8, behavior: 'patrol', isThreat: true },
+                    { x: 150, y: 100, vx: 2, vy: 1, type: 'debris_field', radius: 95, name: 'Debris Field Alpha', speed: 0.8, behavior: 'expand', isThreat: true },
+                    { x: 600, y: 120, vx: -1, vy: 1.5, type: 'debris_field', radius: 80, name: 'Debris Field Beta', speed: 0.6, behavior: 'expand', isThreat: true },
+                    { x: 400, y: 400, vx: 0.5, vy: 0, type: 'fishing_vessel', radius: 50, name: 'Fishing Boat', speed: 1.0, behavior: 'drift', isThreat: false },
+                    { x: 200, y: 300, vx: 0, vy: 0.8, type: 'cargo_ship', radius: 70, name: 'Cargo Ship', speed: 0.8, behavior: 'transit', isThreat: false },
+                    { x: 550, y: 450, vx: -0.5, vy: -0.5, type: 'research_vessel', radius: 45, name: 'Research Ship', speed: 1.2, behavior: 'survey', isThreat: false }
+                ];
+                
+                // Clear and reinitialize
+                const map = document.getElementById('map');
+                map.innerHTML = '<div class="grid-overlay"></div>';
+                
+                this.initializeMap();
+                this.drawMarineObjects();
+                this.calculateMultipleRoutes();
+                this.updateMLPanel();
+                this.logMessage('🔄 Demo reset - ML model ready for testing');
+            }
+            
+            recalculateRoutes() {
+                this.logMessage('🧠 Recalculating routes based on ML classifications');
+                this.calculateMultipleRoutes();
+            }
+            
+            animate() {
+                if (!this.running) return;
+                
+                this.step++;
+                this.detectNearbyObjects();
+                this.moveConvoy();
+                
+                // More frequent recalculation due to dynamic threats
+                if (this.step % 8 === 0 && !this.calculationInProgress) {
+                    this.recalculateRoutes();
+                }
+                
+                // Emergency recalculation if threat gets too close
+                const nearbyThreats = Array.from(this.detectedObjects).filter(i => {
+                    const obj = this.marineObjects[i];
+                    const classification = this.mlClassifications.get(i);
+                    const distance = Math.sqrt((this.convoy.x - obj.x)**2 + (this.convoy.y - obj.y)**2);
+                    return classification && classification.threat_detected && distance < 80;
+                });
+                
+                if (nearbyThreats.length > 0 && !this.calculationInProgress) {
+                    this.logMessage(`🚨 Emergency recalculation - ${nearbyThreats.length} close threats!`);
+                    this.recalculateRoutes();
+                }
+                
+                setTimeout(() => this.animate(), 800 / this.speed);
+            }
+        }
+        
+        let dashboard;
+        
+        function startDemo() { dashboard.start(); }
+        function pauseDemo() { dashboard.pause(); }
+        function stopDemo() { dashboard.stop(); }
+        function resetDemo() { dashboard.reset(); }
+        function recalculateRoutes() { dashboard.recalculateRoutes(); }
+        function setSpeed(speed) { 
+            dashboard.speed = speed; 
+            dashboard.logMessage(`⚡ Speed set to ${speed}x`);
+        }
+        
+        window.onload = () => {
+            dashboard = new EnhancedMultiRouteMaritimeDashboard();
+            console.log('Enhanced dashboard loaded successfully');
+        };
+    </script>
+</body>
+</html>

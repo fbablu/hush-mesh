@@ -41,6 +41,17 @@ curl http://localhost:8081/
 - **ML Test Page**: http://localhost:8081/test_ml.html
 - **Simple CLI Demo**: `python3 simple_demo.py`
 
+### 5. Frontend Access URLs
+```bash
+# Demo Server (Port 8081) - HTML Demos
+http://localhost:8081/enhanced_multi_route.html
+http://localhost:8081/test_ml.html
+
+# ML API Server (Port 9000) - Direct API Access
+http://localhost:9000/health
+http://localhost:9000/
+```
+
 ## Server Endpoints
 
 ### Backend API (Port 8000)
@@ -86,3 +97,17 @@ netstat -tlnp | grep -E ":(8000|8081|9000)"
 ⚠️ **DEFENSIVE SYSTEM ONLY** - All engagement decisions require human authorization. No automated kinetic responses.
 
 See `docs/deploy_instructions.md` for complete deployment guide.
+
+
+
+0) 
+Kill and reset the drones
+pkill -f "python.*server" && pkill -f "python.*app" && pkill -f "http.server"
+
+1) 
+starting ML API Server:
+export PYTHONPATH=/home/participant/.local/lib/python3.11/site-packages:$PYTHONPATH && python3 ml_api_server.py > /tmp/ml_server.log 2>&1 &
+
+
+2) 
+python3 -m http.server 8081 > /tmp/demo_server.log 2>&1 &

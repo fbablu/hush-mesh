@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maritime ACPS - React Components v4.0</title>
+    <title>Maritime ACPS - Enhanced Multi-Route Planning - React v2</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
@@ -26,11 +26,6 @@
                  box-shadow: 0 0 20px #00ff88; transition: all 0.3s ease; z-index: 10; }
         .convoy::after { content: '🚢'; position: absolute; top: -5px; left: -2px; font-size: 16px; }
         
-        .object { position: absolute; width: 15px; height: 15px; border-radius: 50%; z-index: 5; transition: all 0.3s ease; }
-        .object.threat { background: #ff4444; box-shadow: 0 0 15px #ff4444; }
-        .object.benign { background: #4ecdc4; box-shadow: 0 0 15px #4ecdc4; }
-        .object.unknown { background: #ffaa00; box-shadow: 0 0 15px #ffaa00; }
-        
         .destination { position: absolute; width: 15px; height: 15px; background: #ff6b6b; border-radius: 50%;
                       box-shadow: 0 0 15px #ff6b6b; z-index: 8; text-align: center; line-height: 15px; }
         
@@ -41,15 +36,10 @@
         .path-safest { position: absolute; height: 2px; background: linear-gradient(90deg, #4ecdc4, #45b7d1);
                       box-shadow: 0 0 6px rgba(78,205,196,0.6); z-index: 3; transform-origin: left center; opacity: 0.7; }
         
-        .threat-zone { position: absolute; border: 2px dashed #ff4444; border-radius: 50%;
-                      background: rgba(255,68,68,0.1); z-index: 1; transition: all 0.3s ease; }
-        
         .status-panel { background: rgba(0,0,0,0.3); padding: 0.8rem; margin-bottom: 0.8rem; border-radius: 6px; }
         .status-item { margin: 0.3rem 0; padding: 0.4rem; background: rgba(255,255,255,0.05); border-radius: 4px; font-size: 0.85rem; }
         
-        .threat-alert { background: rgba(255,68,68,0.2); border-left: 4px solid #ff4444; }
         .safe-status { background: rgba(0,255,136,0.2); border-left: 4px solid #00ff88; }
-        .ml-analyzing { background: rgba(255,170,0,0.2); border-left: 4px solid #ffaa00; }
         
         .route-option { background: rgba(255,255,255,0.08); border-radius: 6px; padding: 0.8rem; margin: 0.5rem 0; 
                        border-left: 4px solid #666; cursor: pointer; transition: all 0.3s ease; }
@@ -70,13 +60,9 @@
         .btn.danger { background: #ff4444; }
         .btn.success { background: #00ff88; color: #000; }
         
-        .metrics { font-size: 0.8rem; }
         .metric-value { font-weight: bold; color: #00ff88; }
         
         .scenario-indicator { position: absolute; top: 15px; left: 15px; 
-                            background: rgba(0,0,0,0.8); padding: 0.8rem; border-radius: 6px; }
-        
-        .calculation-status { position: absolute; top: 15px; right: 15px;
                             background: rgba(0,0,0,0.8); padding: 0.8rem; border-radius: 6px; }
         
         .grid-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -90,78 +76,57 @@
     <div id="root"></div>
     
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
         
-        const EnhancedMultiRoute = ({ running, setRunning, speed, convoy, setConvoy }) => {
+        const EnhancedMultiRoute = () => {
+            const [convoy, setConvoy] = useState({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 });
             const [destination] = useState({ x: 700, y: 200, lat: 25.8200, lon: -80.1200 });
+            const [running, setRunning] = useState(false);
+            const [speed, setSpeed] = useState(1);
             const [selectedRoute, setSelectedRoute] = useState('optimal');
-            const [routes, setRoutes] = useState({});
-            const [detectedObjects, setDetectedObjects] = useState(new Set());
-            const [mlClassifications, setMlClassifications] = useState(new Map());
-            const [calculationInProgress, setCalculationInProgress] = useState(false);
-            
-            const marineObjects = useRef([
-                { x: 300, y: 450, vx: -2, vy: -3, type: 'small_fast_craft', radius: 70, name: 'Pirate Skiff Alpha', speed: 3.5, behavior: 'intercept', isThreat: true },
-                { x: 180, y: 200, vx: 2.5, vy: 1, type: 'small_fast_craft', radius: 65, name: 'Pirate Skiff Beta', speed: 3.2, behavior: 'intercept', isThreat: true },
-                { x: 400, y: 400, vx: 0.5, vy: 0, type: 'fishing_vessel', radius: 50, name: 'Fishing Boat', speed: 1.0, behavior: 'drift', isThreat: false }
-            ]);
+            const [routes, setRoutes] = useState({
+                optimal: { waypoints: [], metrics: { distance: '8.2', threatExposure: '2.1', score: '85' } },
+                fastest: { waypoints: [], metrics: { distance: '7.8', threatExposure: '3.2', score: '78' } },
+                safest: { waypoints: [], metrics: { distance: '9.1', threatExposure: '1.2', score: '82' } }
+            });
             
             useEffect(() => {
-                setTimeout(() => calculateRoutes(), 500);
+                // Generate initial routes
+                const newRoutes = {};
+                ['optimal', 'fastest', 'safest'].forEach(strategy => {
+                    const waypoints = [];
+                    for (let i = 1; i <= 8; i++) {
+                        const progress = i / 8;
+                        let x = convoy.x + (destination.x - convoy.x) * progress;
+                        let y = convoy.y + (destination.y - convoy.y) * progress;
+                        
+                        if (strategy === 'safest') {
+                            y -= 60 * Math.sin(progress * Math.PI);
+                        } else if (strategy === 'fastest') {
+                            // Direct route
+                        } else {
+                            // Optimal - slight curve
+                            y -= 30 * Math.sin(progress * Math.PI);
+                        }
+                        waypoints.push({ x, y });
+                    }
+                    newRoutes[strategy] = { 
+                        waypoints, 
+                        metrics: routes[strategy].metrics 
+                    };
+                });
+                setRoutes(newRoutes);
             }, []);
             
             useEffect(() => {
                 let interval;
                 if (running) {
                     interval = setInterval(() => {
-                        detectObjects();
                         moveConvoy();
                     }, 100 / speed);
                 }
                 return () => clearInterval(interval);
             }, [running, speed, selectedRoute, routes]);
-            
-            const calculateRoutes = () => {
-                setCalculationInProgress(true);
-                setTimeout(() => {
-                    const newRoutes = {
-                        optimal: { waypoints: generateWaypoints('optimal'), metrics: { distance: '8.2', threatExposure: '2.1', score: '85' } },
-                        fastest: { waypoints: generateWaypoints('fastest'), metrics: { distance: '7.8', threatExposure: '3.2', score: '78' } },
-                        safest: { waypoints: generateWaypoints('safest'), metrics: { distance: '9.1', threatExposure: '1.2', score: '82' } }
-                    };
-                    setRoutes(newRoutes);
-                    setCalculationInProgress(false);
-                }, 1500);
-            };
-            
-            const generateWaypoints = (strategy) => {
-                const waypoints = [];
-                for (let i = 1; i <= 8; i++) {
-                    const progress = i / 8;
-                    let x = convoy.x + (destination.x - convoy.x) * progress;
-                    let y = convoy.y + (destination.y - convoy.y) * progress;
-                    
-                    if (strategy === 'safest') {
-                        y -= 60 * Math.sin(progress * Math.PI);
-                    }
-                    waypoints.push({ x, y });
-                }
-                return waypoints;
-            };
-            
-            const detectObjects = () => {
-                // Simplified detection without ML calls
-                marineObjects.current.forEach((obj, i) => {
-                    const distance = Math.sqrt((convoy.x - obj.x)**2 + (convoy.y - obj.y)**2);
-                    if (distance < obj.radius * 2.0) {
-                        setDetectedObjects(prev => new Set([...prev, i]));
-                        setMlClassifications(prev => new Map(prev.set(i, { 
-                            threat_detected: obj.isThreat, 
-                            confidence: 0.85 
-                        })));
-                    }
-                });
-            };
             
             const moveConvoy = () => {
                 if (!routes[selectedRoute]?.waypoints?.length) return;
@@ -172,8 +137,15 @@
                 const distance = Math.sqrt(dx*dx + dy*dy);
                 
                 if (distance < 15) {
-                    routes[selectedRoute].waypoints.shift();
-                    if (routes[selectedRoute].waypoints.length === 0) {
+                    setRoutes(prev => ({
+                        ...prev,
+                        [selectedRoute]: {
+                            ...prev[selectedRoute],
+                            waypoints: prev[selectedRoute].waypoints.slice(1)
+                        }
+                    }));
+                    
+                    if (routes[selectedRoute].waypoints.length <= 1) {
                         setRunning(false);
                         return;
                     }
@@ -190,7 +162,7 @@
             const renderRoutes = () => {
                 return Object.keys(routes).map(strategy => {
                     const route = routes[strategy];
-                    if (!route?.waypoints) return null;
+                    if (!route?.waypoints?.length) return null;
                     
                     let prevPoint = convoy;
                     const opacity = selectedRoute === strategy ? '1' : '0.3';
@@ -229,7 +201,7 @@
                         React.createElement('div', { key: 's3', className: 'status-item' }, 'Drones: 4/4 Online')
                     ]),
                     React.createElement('h3', { key: 'h2' }, '📊 Current Metrics'),
-                    React.createElement('div', { key: 'metrics', className: 'status-panel metrics' }, [
+                    React.createElement('div', { key: 'metrics', className: 'status-panel' }, [
                         React.createElement('div', { key: 'm1' }, ['Position: ', React.createElement('span', { className: 'metric-value' }, `${convoy.lat.toFixed(4)}, ${convoy.lon.toFixed(4)}`)]),
                         React.createElement('div', { key: 'm2' }, ['Speed: ', React.createElement('span', { className: 'metric-value' }, '12 knots')]),
                         React.createElement('div', { key: 'm3' }, ['Heading: ', React.createElement('span', { className: 'metric-value' }, '090°')])
@@ -240,9 +212,8 @@
                 React.createElement('div', { key: 'map-container', className: 'map-container' }, [
                     React.createElement('div', { key: 'scenario', className: 'scenario-indicator' }, [
                         React.createElement('h4', null, 'Enhanced Multi-Route Planning'),
-                        React.createElement('p', null, 'ML-powered threat detection active...')
+                        React.createElement('p', null, 'React-powered route visualization')
                     ]),
-                    calculationInProgress && React.createElement('div', { key: 'calc', className: 'calculation-status' }, '🧠 Analyzing Routes...'),
                     React.createElement('div', { key: 'canvas', className: 'map-canvas' }, [
                         React.createElement('div', { key: 'grid', className: 'grid-overlay' }),
                         React.createElement('div', { 
@@ -291,6 +262,37 @@
             ]);
         };
         
+        const Controls = ({ running, setRunning, speed, setSpeed, convoy, setConvoy }) => {
+            return React.createElement('div', { className: 'controls' }, [
+                React.createElement('button', { 
+                    key: 'start', 
+                    className: 'btn success', 
+                    onClick: () => setRunning(true) 
+                }, '▶️ Start Demo'),
+                React.createElement('button', { 
+                    key: 'pause', 
+                    className: 'btn', 
+                    onClick: () => setRunning(false) 
+                }, '⏸️ Pause'),
+                React.createElement('button', { 
+                    key: 'stop', 
+                    className: 'btn danger', 
+                    onClick: () => { 
+                        setRunning(false); 
+                        setConvoy({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 }); 
+                    } 
+                }, '⏹️ Stop'),
+                React.createElement('span', { key: 'speed-label', style: { marginLeft: '1rem', color: '#ccc' } }, 'Speed:'),
+                [1, 2, 5, 10].map(s => 
+                    React.createElement('button', {
+                        key: s,
+                        className: `btn ${speed === s ? 'success' : ''}`,
+                        onClick: () => setSpeed(s)
+                    }, `${s}x`)
+                )
+            ]);
+        };
+        
         const App = () => {
             const [running, setRunning] = useState(false);
             const [speed, setSpeed] = useState(1);
@@ -300,31 +302,19 @@
                 React.createElement(EnhancedMultiRoute, { 
                     key: 'dashboard',
                     running,
-                    setRunning,
                     speed,
                     convoy,
                     setConvoy
                 }),
-                React.createElement('div', { key: 'controls', className: 'controls' }, [
-                    React.createElement('button', { 
-                        key: 'start', 
-                        className: 'btn success', 
-                        onClick: () => setRunning(true) 
-                    }, '▶️ Start Demo'),
-                    React.createElement('button', { 
-                        key: 'pause', 
-                        className: 'btn', 
-                        onClick: () => setRunning(false) 
-                    }, '⏸️ Pause'),
-                    React.createElement('button', { 
-                        key: 'stop', 
-                        className: 'btn danger', 
-                        onClick: () => { 
-                            setRunning(false); 
-                            setConvoy({ x: 100, y: 400, lat: 25.7617, lon: -80.1918 }); 
-                        } 
-                    }, '⏹️ Stop')
-                ])
+                React.createElement(Controls, { 
+                    key: 'controls',
+                    running,
+                    setRunning,
+                    speed,
+                    setSpeed,
+                    convoy,
+                    setConvoy
+                })
             ]);
         };
         
