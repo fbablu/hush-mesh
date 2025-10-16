@@ -234,6 +234,6 @@ hush-mesh/
 
 ---
 
-**Developed for**: AWS Maritime Defense Hackathon  
+**Developed for**: AWS Mission Autonomy Hackathon Fall 2025  
 **Team**: Clankers
 **Status**: Active Development – MVP Complete
