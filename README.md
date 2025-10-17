@@ -222,7 +222,7 @@ hush-mesh/
 
 **Human-in-the-Loop Design**: All engagement decisions require explicit human authorization. The system provides threat assessment and recommendations only.
 
-**Defensive Posture**: System is designed exclusively for defensive maritime convoy protection. No autonomous offensive capabilities.
+**Defensive Posture**: System is designed exclusively for defensive maritime convoy protection. No offensive capabilities. 
 
 **Data Privacy**: Synthetic training data only. No PII collection. All telemetry encrypted in transit and at rest.
 
